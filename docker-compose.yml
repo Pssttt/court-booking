@@ -23,7 +23,7 @@ services:
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
       CONFIRMATION_EMAIL: ${CONFIRMATION_EMAIL}
 
-      SERVER_HOST: 0.0.0.0
+      SERVER_HOST: localhost
       SERVER_PORT: 3000
       SERVER_DEBUG: "false"
 
@@ -31,9 +31,6 @@ services:
       - booking_data:/app/data
 
     restart: unless-stopped
-
-    networks:
-      - court-booking-network
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/courts"]
@@ -45,7 +42,3 @@ services:
 volumes:
   booking_data:
     driver: local
-
-networks:
-  court-booking-network:
-    driver: bridge
