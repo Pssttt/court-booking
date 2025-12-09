@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>All Bookings</title>
+    <link rel="stylesheet" href="/static/css/shared.css" />
+    <link rel="stylesheet" href="/static/css/bookings.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>All Bookings</h1>
+        <p class="subtitle">View and manage your scheduled bookings</p>
+        <div class="nav-buttons">
+          <button class="nav-btn active">All Bookings</button>
+          <a href="/" class="nav-btn">New Booking</a>
+        </div>
+      </header>
+
+      <div class="message info" id="info"></div>
+      <div class="message success" id="success"></div>
+      <div class="message error" id="error"></div>
+
+      <div class="loading" id="loading" style="display: none">
+        Loading bookings...
+      </div>
+      <div class="bookings-list" id="bookingsList"></div>
+    </div>
+
+    <div class="modal" id="cancelModal">
+      <div class="modal-content">
+        <div class="modal-header">Cancel Booking?</div>
+        <div class="modal-body">
+          <p>Are you sure you want to cancel this booking?</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
+          </p>
+          <p style="margin-top: 8px; font-size: 12px">
+            <label
+              for="cancelPassword"
+              style="display: block; margin-bottom: 6px"
+              >Cancel Password:</label
+            >
+            <input
+              type="password"
+              id="cancelPassword"
+              class="password-input"
+              placeholder="Enter password"
+            />
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel" onclick="closeCancelModal()">
+            Keep Booking
+          </button>
+          <button
+            class="modal-btn confirm"
+            onclick="confirmCancel()"
+            id="confirmCancelBtn"
+          >
+            Cancel Booking
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let allBookings = [];
+      let cancelingBookingId = null;
+
+      function isBookingPast(booking) {
+        const today = new Date();
+        const [hours, minutes] = booking.submit_time.split(":").map(Number);
+        const bookingTime = new Date();
+        bookingTime.setHours(hours, minutes, 0, 0);
+        return bookingTime < today;
+      }
+
+      async function loadBookings() {
+        const loading = document.getElementById("loading");
+        const bookingsList = document.getElementById("bookingsList");
+        const infoMsg = document.getElementById("info");
+
+        loading.style.display = "block";
+        bookingsList.innerHTML = "";
+        infoMsg.style.display = "none";
+
+        try {
+          const response = await fetch("/api/bookings");
+          const data = await response.json();
+          allBookings = data.bookings || [];
+
+          if (allBookings.length === 0) {
+            bookingsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>No bookings scheduled yet</p>
+                            <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
+                        </div>
+                    `;
+          } else {
+            bookingsList.innerHTML = allBookings
+              .map((booking) => {
+                const isPast = isBookingPast(booking);
+                const statusText = isPast ? "Completed" : "Scheduled";
+                const statusClass = isPast ? "submitted" : "";
+
+                return `
+                            <div class="booking-card ${statusClass}">
+                                <div class="booking-header">
+                                    <div>
+                                        <div class="booking-players">${booking.p1}, ${booking.p2}, ${booking.p3}</div>
+                                        <div class="booking-id">Booking #${booking.id}</div>
+                                    </div>
+                                    <span class="booking-status ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="booking-details">
+                                    <div class="detail-item">
+                                        <div class="detail-label">Court</div>
+                                        <div class="detail-value">${booking.court}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Submit Time</div>
+                                        <div class="detail-value">${booking.submit_time}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Created</div>
+                                        <div class="detail-value">${new Date(booking.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Email</div>
+                                        <div class="detail-value">${booking.confirmation_email || "None"}</div>
+                                    </div>
+                                </div>
+                                ${
+                                  !isPast
+                                    ? `
+                                    <div class="booking-actions">
+                                        <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${booking.p1}')">Cancel Booking</button>
+                                    </div>
+                                `
+                                    : ""
+                                }
+                            </div>
+                        `;
+              })
+              .join("");
+
+            infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
+            infoMsg.style.display = "block";
+          }
+        } catch (error) {
+          console.error("Error loading bookings:", error);
+          bookingsList.innerHTML =
+            '<div class="empty-state"><p>Error loading bookings</p></div>';
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      function openCancelModal(bookingId, playerName) {
+        cancelingBookingId = bookingId;
+        document.getElementById("cancelBookingInfo").textContent =
+          `#${bookingId} - ${playerName}`;
+        document.getElementById("cancelPassword").value = "";
+        document.getElementById("cancelModal").classList.add("active");
+        document.getElementById("cancelPassword").focus();
+      }
+
+      function closeCancelModal() {
+        document.getElementById("cancelModal").classList.remove("active");
+        cancelingBookingId = null;
+      }
+
+      async function confirmCancel() {
+        if (!cancelingBookingId) return;
+
+        const password = document.getElementById("cancelPassword").value;
+        if (!password) {
+          alert("Please enter the cancel password");
+          return;
+        }
+
+        const confirmBtn = document.getElementById("confirmCancelBtn");
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Cancelling...";
+
+        try {
+          const response = await fetch("/api/cancel", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking_id: cancelingBookingId,
+              password: password,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            document.getElementById("success").textContent =
+              "Booking cancelled successfully";
+            document.getElementById("success").style.display = "block";
+            closeCancelModal();
+            await loadBookings();
+          } else {
+            document.getElementById("error").textContent =
+              data.detail || "Failed to cancel booking";
+            document.getElementById("error").style.display = "block";
+          }
+        } catch (error) {
+          document.getElementById("error").textContent =
+            "Error: " + error.message;
+          document.getElementById("error").style.display = "block";
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Cancel Booking";
+        }
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeCancelModal();
+      });
+
+      loadBookings();
+      setInterval(loadBookings, 30000);
+    </script>
+  </body>
+</html>

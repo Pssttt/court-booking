@@ -5,12 +5,16 @@ Application initialization and startup
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from config.settings import COURTS, DEFAULT_SUBMIT_TIME, SERVER
 from app.routes import router
-from app.templates import get_booking_form_html
+
+TEMPLATES_DIR = Path(__file__).parent / "app" / "templates"
+STATIC_DIR = Path(__file__).parent / "app" / "static"
 
 # Configure logging
 logging.basicConfig(
@@ -37,11 +41,20 @@ app = FastAPI(
 
 app.include_router(router)
 
+# Serve static files (CSS, JS, images)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-@app.get("/", response_class=HTMLResponse)
+
+@app.get("/", response_class=FileResponse)
 async def home():
     """Serve the booking form"""
-    return get_booking_form_html(COURTS, DEFAULT_SUBMIT_TIME)
+    return FileResponse(TEMPLATES_DIR / "booking.html", media_type="text/html")
+
+
+@app.get("/bookings", response_class=FileResponse)
+async def view_bookings():
+    """Serve the bookings view page"""
+    return FileResponse(TEMPLATES_DIR / "bookings.html", media_type="text/html")
 
 
 @app.get("/health")

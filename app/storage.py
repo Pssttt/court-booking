@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+
 logger = logging.getLogger(__name__)
 
 # store bookings in data/bookings.json
@@ -58,6 +59,7 @@ def add_booking(
     bookings = load_bookings()
 
     booking = {
+        "id": len(bookings) + 1,
         "p1": p1,
         "p2": p2,
         "p3": p3,
@@ -65,8 +67,11 @@ def add_booking(
         "submit_time": submit_time,
         "confirmation_email": confirmation_email,
         "created_at": datetime.now().isoformat(),
-        "id": len(bookings) + 1,
     }
+
+    if confirmation_email:
+        booking["booking_name"] = p1
+        booking["booking_email"] = confirmation_email
 
     bookings.append(booking)
     save_bookings(bookings)

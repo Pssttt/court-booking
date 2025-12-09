@@ -6,10 +6,10 @@ All endpoints are defined here
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
 
-from app.models import BookingRequest, BookingResponse
-from app.services import wait_until_and_submit, FormSubmissionError
-from app.storage import add_booking, get_all_bookings
-from config.settings import COURTS
+from app.models import BookingRequest, BookingResponse, CancelBookingRequest
+from app.services import wait_until_and_submit, FormSubmissionError, cancel_task
+from app.storage import add_booking, get_all_bookings, delete_booking, get_booking
+from config.settings import COURTS, CANCEL_PASSWORD
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,7 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
         # Schedule submission in background
         background_tasks.add_task(
             wait_until_and_submit,
+            booking_info["id"],
             player_names,
             booking.court,
             hour,
@@ -100,3 +101,36 @@ async def get_bookings():
 async def get_courts():
     """Get available courts and time slots"""
     return {"courts": COURTS}
+
+
+@router.delete("/cancel")
+async def cancel_booking(request: CancelBookingRequest):
+    """
+    Cancel a scheduled booking
+
+    Requires password authentication for security.
+    Cancels the scheduled background task immediately.
+    """
+    if request.password != CANCEL_PASSWORD:
+        logger.warning(f"Failed cancel attempt for booking {request.booking_id}")
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    booking = get_booking(request.booking_id)
+    if not booking:
+        logger.error(f"Booking {request.booking_id} not found")
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    cancel_task(request.booking_id)
+
+    delete_booking(request.booking_id)
+
+    logger.info(
+        f"Cancelled booking {request.booking_id}: {booking['p1']}, {booking['p2']}, {booking['p3']}"
+    )
+
+    return {
+        "status": "cancelled",
+        "message": f"Booking {request.booking_id} has been cancelled",
+        "booking": booking,
+        "total_scheduled": len(get_all_bookings()),
+    }

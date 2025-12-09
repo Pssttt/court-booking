@@ -7,14 +7,22 @@ import logging
 from typing import Optional
 from datetime import datetime
 import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA
+from config.settingstest import GOOGLE_FORM, BOOKING_DATA
 from app.email_service import send_confirmation_email
 
 logger = logging.getLogger(__name__)
 
+active_tasks = {}
+
 
 class FormSubmissionError(Exception):
     """Custom exception for form submission errors"""
+
+    pass
+
+
+class TaskCancelled(Exception):
+    """Exception raised when a task is cancelled"""
 
     pass
 
@@ -40,7 +48,7 @@ def submit_form(
         logger.info("Submitting final page with all data")
 
         payload = {
-            field_ids["name"]: BOOKING_DATA["phone"],
+            field_ids["name"]: BOOKING_DATA["name"],
             field_ids["phone"]: BOOKING_DATA["phone"],
             field_ids["email"]: BOOKING_DATA["email"],
             field_ids["type_of_client"]: BOOKING_DATA["type_of_client"],
@@ -56,7 +64,12 @@ def submit_form(
             "pageHistory": "0,1,3,4",
         }
 
-        response = requests.post(submit_url, data=payload, timeout=10)
+        response = requests.post(
+            submit_url,
+            data=payload,
+            timeout=10,
+            allow_redirects=True,
+        )
 
         logger.info(f"Response status: {response.status_code}")
 
@@ -67,8 +80,8 @@ def submit_form(
 
             if user_email:
                 send_confirmation_email(player_names, court_time, user_email)
-
-            send_confirmation_email(player_names, court_time)
+            else:
+                send_confirmation_email(player_names, court_time)
 
             return True
         else:
@@ -85,6 +98,7 @@ def submit_form(
 
 
 def wait_until_and_submit(
+    booking_id: int,
     player_names: dict,
     court_time: str,
     target_hour: int,
@@ -94,7 +108,10 @@ def wait_until_and_submit(
     """
     Wait until target time, then submit form
 
+    Registers task in active_tasks dict for potential cancellation.
+
     Args:
+        booking_id: Unique booking identifier for task tracking
         player_names: {"p1": "Name1", "p2": "Name2", "p3": "Name3"}
         court_time: Selected court and time slot
         target_hour: Hour in 24-hour format (0-23)
@@ -104,12 +121,42 @@ def wait_until_and_submit(
     Returns:
         True if successful, False otherwise
     """
-    logger.info(f"Scheduled submission at {target_hour:02d}:{target_minute:02d}")
+    logger.info(
+        f"Scheduled submission at {target_hour:02d}:{target_minute:02d} for booking {booking_id}"
+    )
 
-    while True:
-        now = datetime.now()
-        if now.hour == target_hour and now.minute == target_minute:
-            logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
-            return submit_form(player_names, court_time, user_email)
+    active_tasks[booking_id] = True
 
-        time.sleep(1)
+    try:
+        while True:
+            if booking_id not in active_tasks:
+                logger.info(f"Task for booking {booking_id} was cancelled")
+                raise TaskCancelled(f"Booking {booking_id} was cancelled")
+
+            now = datetime.now()
+            if now.hour == target_hour and now.minute == target_minute:
+                logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
+                result = submit_form(player_names, court_time, user_email)
+                active_tasks.pop(booking_id, None)
+                return result
+
+            time.sleep(1)
+    except TaskCancelled:
+        return False
+
+
+def cancel_task(booking_id: int) -> bool:
+    """
+    Cancel a scheduled booking task
+
+    Args:
+        booking_id: The booking ID to cancel
+
+    Returns:
+        True if task was cancelled, False if not found
+    """
+    if booking_id in active_tasks:
+        del active_tasks[booking_id]
+        logger.info(f"Cancelled task for booking {booking_id}")
+        return True
+    return False

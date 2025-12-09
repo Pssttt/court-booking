@@ -31,3 +31,10 @@ class BookingsListResponse(BaseModel):
 
     total: int
     bookings: list
+
+
+class CancelBookingRequest(BaseModel):
+    """Request to cancel a booking"""
+
+    booking_id: int
+    password: str
