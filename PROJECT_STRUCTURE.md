@@ -7,18 +7,18 @@ Production-ready project structure. Easy to maintain and extend.
 ```
 court-booking-webapp/
 │
-├── config/                 # Configuration - EDIT HERE
+├── config/                # Configuration - EDIT HERE
 │   ├── __init__.py
 │   └── settings.py        # All settings in one place
 │
-├── app/                    # Application code
+├── app/                   # Application code
 │   ├── __init__.py
 │   ├── services.py        # Form submission logic
 │   ├── routes.py          # API endpoints
 │   ├── templates.py       # HTML form
 │   └── models.py          # Data validation
 │
-├── docs/                   # Documentation
+├── docs/                  # Documentation
 │   ├── DEVELOPMENT.md     # How to customize
 │   └── DEPLOYMENT.md      # How to deploy
 │
@@ -26,7 +26,7 @@ court-booking-webapp/
 ├── verify.py              # Verify configuration
 ├── requirements.txt       # Python dependencies
 ├── start.sh               # Quick start script
-└── README.md             # Quick reference
+└── README.md              # Quick reference
 ```
 
 ## Key Features
@@ -116,7 +116,7 @@ Test API:
 ```bash
 curl -X POST http://localhost:8000/api/book \
   -H "Content-Type: application/json" \
-  -d '{"p1":"Name1","p2":"Name2","p3":"Name3","court":"Court No. 1"}'
+  -d '{"p1":"Name1","p2":"Name2","p3":"Name3","court":"Court No. 1 (in thai)"}'
 ```
 
 ## Deployment
@@ -152,18 +152,6 @@ See docs/DEVELOPMENT.md for:
 - Error handling
 - Security best practices
 - Performance optimization
-
-## Adding Features
-
-### Add email notifications
-
-```python
-# In app/services.py
-import smtplib
-
-def send_confirmation_email(player_names, court):
-    # Send email to notify about booking
-```
 
 ### Add database persistence
 
@@ -227,12 +215,3 @@ For deeper changes, see:
 - `docs/DEVELOPMENT.md` - Customization guide
 - `docs/DEPLOYMENT.md` - Deployment guide
 - Code comments - Explain each component
-
-## Next Steps
-
-1. ✅ Run `./start.sh`
-2. ✅ Test at <http://localhost:8000>
-3. ✅ Edit `config/settings.py` to customize
-4. ✅ Deploy to server (see docs/DEPLOYMENT.md)
-
-Ready to go! 🚀
