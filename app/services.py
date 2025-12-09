@@ -40,7 +40,7 @@ def submit_form(
         logger.info("Submitting final page with all data")
 
         payload = {
-            field_ids["name"]: BOOKING_DATA.get("name", BOOKING_DATA["phone"]),
+            field_ids["name"]: BOOKING_DATA["phone"],
             field_ids["phone"]: BOOKING_DATA["phone"],
             field_ids["email"]: BOOKING_DATA["email"],
             field_ids["type_of_client"]: BOOKING_DATA["type_of_client"],
