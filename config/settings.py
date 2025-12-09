@@ -6,6 +6,7 @@ Loads from environment variables (.env file)
 import os
 from dotenv import load_dotenv
 
+# Load .env file
 load_dotenv()
 
 # ============================================================================
@@ -13,7 +14,6 @@ load_dotenv()
 # ============================================================================
 
 BOOKING_DATA = {
-    "name": os.getenv("BOOKING_NAME"),
     "phone": os.getenv("BOOKING_PHONE"),
     "email": os.getenv("BOOKING_EMAIL"),
     "student_code": os.getenv("BOOKING_STUDENT_CODE"),
@@ -21,7 +21,7 @@ BOOKING_DATA = {
     "faculty": os.getenv("BOOKING_FACULTY"),
     "year_of_study": os.getenv("BOOKING_YEAR_OF_STUDY"),
     "degree": os.getenv("BOOKING_DEGREE"),
-    "type_of_client": "Student",
+    "type_of_client": os.getenv("BOOKING_TYPE_OF_CLIENT"),
 }
 
 # ============================================================================
@@ -29,24 +29,62 @@ BOOKING_DATA = {
 # ============================================================================
 
 GOOGLE_FORM = {
-    "form_url": os.getenv("GOOGLE_FORM_URL"),
     "submit_url": os.getenv("GOOGLE_FORM_SUBMIT_URL"),
     "field_ids": {
-        "name": "entry.167015706",
-        "phone": "entry.1279526764",
-        "email": "entry.118361342",
-        "type_of_client": "entry.1823184155",
-        "student_code": "entry.738742748",
-        "department": "entry.413295108",
-        "faculty": "entry.204898568",
-        "degree": "entry.129371148",
-        "year_of_study": "entry.448340794",
-        "court": "entry.1456468180",
-        "p1": "entry.1726626976",
-        "p2": "entry.924493527",
-        "p3": "entry.1057624971",
+        "name": "entry.1447004130",
+        "phone": "entry.1162689565",
+        "email": "entry.397132313",
+        "type_of_client": "entry.60086338",
+        "student_code": "entry.1758389959",
+        "department": "entry.578101683",
+        "faculty": "entry.2138721565",
+        "degree": "entry.188451592",
+        "year_of_study": "entry.1610619932",
+        "court_time": "entry.1063303379",
+        "p1": "entry.1572571765",
+        "p2": "entry.1458140720",
+        "p3": "entry.1099932442",
     },
 }
+
+# ============================================================================
+# COURT OPTIONS (Court + Time Slot)
+# ============================================================================
+
+COURTS = [
+    {
+        "id": "1",
+        "name": "คอร์ทที่ 1 รอบที่ 1 เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+    },
+    {
+        "id": "2",
+        "name": "คอร์ทที่ 1 รอบที่ 2 เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+    },
+    {
+        "id": "3",
+        "name": "คอร์ทที่ 2 รอบที่ 1 เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+    },
+    {
+        "id": "4",
+        "name": "คอร์ทที่ 2 รอบที่ 2 เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+    },
+    {
+        "id": "5",
+        "name": "คอร์ทที่ 3 รอบที่ 1 เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+    },
+    {
+        "id": "6",
+        "name": "คอร์ทที่ 3 รอบที่ 2 เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+    },
+    {
+        "id": "7",
+        "name": "คอร์ทที่ 4 รอบที่ 1 เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+    },
+    {
+        "id": "8",
+        "name": "คอร์ทที่ 4 รอบที่ 2 เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+    },
+]
 
 # ============================================================================
 # EMAIL CONFIGURATION
@@ -54,24 +92,9 @@ GOOGLE_FORM = {
 
 EMAIL_CONFIG = {
     "api_key": os.getenv("RESEND_API_KEY", ""),
-    "from_email": os.getenv("RESEND_FROM_EMAIL"),
-    "confirmation_to": os.getenv("CONFIRMATION_EMAIL"),
+    "from_email": os.getenv("RESEND_FROM_EMAIL", ""),
+    "confirmation_to": os.getenv("CONFIRMATION_EMAIL", ""),
 }
-
-# ============================================================================
-# COURT OPTIONS
-# ============================================================================
-
-COURTS = [
-    {"id": "1", "name": "Court No. 1"},
-    {"id": "2", "name": "Court No. 2"},
-    {"id": "3", "name": "Court No. 3"},
-    {"id": "4", "name": "Court No. 4"},
-    {"id": "5", "name": "Court No. 5"},
-    {"id": "6", "name": "Court No. 6"},
-    {"id": "7", "name": "Court No. 7"},
-    {"id": "8", "name": "Court No. 8"},
-]
 
 # ============================================================================
 # SERVER SETTINGS

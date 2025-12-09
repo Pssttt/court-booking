@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 def send_confirmation_email(
-    player_names: dict, court: str, recipient_email: Optional[str] = None
+    player_names: dict, court_time: str, recipient_email: Optional[str] = None
 ) -> bool:
     """
-    Send booking confirmation email
+    Send booking confirmation email to user and admin
 
     Args:
         player_names: {"p1": "Name1", "p2": "Name2", "p3": "Name3"}
-        court: Selected court
-        recipient_email: Optional custom recipient (defaults to admin email)
+        court_time: Selected court and time slot
+        recipient_email: Optional user email (admin always gets one)
 
     Returns:
         True if successful, False otherwise
@@ -33,8 +33,6 @@ def send_confirmation_email(
 
         resend.api_key = EMAIL_CONFIG["api_key"]
 
-        send_to = recipient_email or EMAIL_CONFIG["confirmation_to"]
-
         html_content = f"""
         <html>
             <body style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -43,7 +41,7 @@ def send_confirmation_email(
                 <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
                     <h2 style="margin-top: 0; color: #555;">Booking Details</h2>
                     
-                    <p><strong>Court:</strong> {court}</p>
+                    <p><strong>Court & Time:</strong> {court_time}</p>
                     
                     <h3 style="margin-top: 20px; color: #555;">Players</h3>
                     <ul>
@@ -60,10 +58,30 @@ def send_confirmation_email(
         </html>
         """
 
+        # Send to user if provided
+        if recipient_email:
+            params = {
+                "from": EMAIL_CONFIG["from_email"],
+                "to": [recipient_email],
+                "subject": f"Badminton Court Booking Confirmed - {court_time}",
+                "html": html_content,
+            }
+
+            response = resend.Emails.send(params)
+
+            if response and response.get("id"):
+                logger.info(
+                    f"Confirmation email sent to user {recipient_email} (ID: {response.get('id')})"
+                )
+            else:
+                logger.error(f"Email to user failed: {response}")
+
+        # Always send to admin
+        admin_email = EMAIL_CONFIG["confirmation_to"]
         params = {
             "from": EMAIL_CONFIG["from_email"],
-            "to": [send_to],
-            "subject": f"Badminton Court Booking Confirmed - {court}",
+            "to": [admin_email],
+            "subject": f"Badminton Court Booking Confirmed - {court_time}",
             "html": html_content,
         }
 
@@ -71,11 +89,11 @@ def send_confirmation_email(
 
         if response and response.get("id"):
             logger.info(
-                f"Confirmation email sent to {send_to} (ID: {response.get('id')})"
+                f"Confirmation email sent to admin {admin_email} (ID: {response.get('id')})"
             )
             return True
         else:
-            logger.error(f"Email response invalid: {response}")
+            logger.error(f"Email to admin failed: {response}")
             return False
 
     except Exception as e:

@@ -1,3 +1,8 @@
+"""
+API Routes
+All endpoints are defined here
+"""
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
 
@@ -25,7 +30,7 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
     """
     Schedule a court booking
 
-    Submits form at specified time with player names and court selection.
+    Submits form at specified time with player names and court/time slot selection.
     All other data (phone, email, student ID, etc.) is auto-filled.
     """
     try:
@@ -39,7 +44,6 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
         if booking.court not in valid_courts:
             raise ValueError(f"Invalid court. Must be one of: {valid_courts}")
 
-        # player names
         player_names = {
             "p1": booking.p1,
             "p2": booking.p2,
@@ -94,5 +98,5 @@ async def get_bookings():
 
 @router.get("/courts")
 async def get_courts():
-    """Get available courts"""
+    """Get available courts and time slots"""
     return {"courts": COURTS}
