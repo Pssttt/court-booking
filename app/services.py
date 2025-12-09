@@ -47,10 +47,17 @@ def submit_form(
 
         logger.info("Submitting final page with all data")
 
+        if user_email:
+            booking_name = player_names.get("p1")
+            booking_email = user_email
+        else:
+            booking_name = BOOKING_DATA["name"]
+            booking_email = BOOKING_DATA["email"]
+
         payload = {
-            field_ids["name"]: BOOKING_DATA["name"],
+            field_ids["name"]: booking_name,
             field_ids["phone"]: BOOKING_DATA["phone"],
-            field_ids["email"]: BOOKING_DATA["email"],
+            field_ids["email"]: booking_email,
             field_ids["type_of_client"]: BOOKING_DATA["type_of_client"],
             field_ids["student_code"]: BOOKING_DATA["student_code"],
             field_ids["department"]: BOOKING_DATA["department"],
