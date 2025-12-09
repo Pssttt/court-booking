@@ -5,6 +5,7 @@ All endpoints are defined here
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
+from datetime import datetime, timedelta
 
 from app.models import BookingRequest, BookingResponse, CancelBookingRequest
 from app.services import wait_until_and_submit, FormSubmissionError, cancel_task
@@ -25,6 +26,23 @@ def parse_time(time_str: str) -> tuple[int, int]:
         raise ValueError(f"Invalid time format: {time_str}. Use HH:MM")
 
 
+def get_next_submission_time(hour: int, minute: int) -> tuple[int, int, str]:
+    """
+    Get the next submission time, accounting for past times (next day).
+
+    Returns:
+        Tuple of (target_hour, target_minute, submission_date_str)
+    """
+    now = datetime.now()
+    target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+    if target_time < now:
+        target_time += timedelta(days=1)
+
+    submission_date = target_time.strftime("%Y-%m-%d %H:%M")
+    return target_time.hour, target_time.minute, submission_date
+
+
 @router.post("/book", response_model=BookingResponse)
 async def create_booking(booking: BookingRequest, background_tasks: BackgroundTasks):
     """
@@ -38,6 +56,10 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
         hour, minute = parse_time(booking.submit_time)
         if not (0 <= hour <= 23 and 0 <= minute <= 59):
             raise ValueError("Time out of range")
+
+        target_hour, target_minute, submission_date = get_next_submission_time(
+            hour, minute
+        )
 
         # Validate court
         valid_courts = [court["name"] for court in COURTS]
@@ -58,10 +80,11 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
             booking.court,
             booking.submit_time,
             booking.confirmation_email,
+            submission_date,
         )
 
         logger.info(
-            f"Scheduled: {booking.p1}, {booking.p2}, {booking.p3} for {booking.court} at {booking.submit_time}"
+            f"Scheduled: {booking.p1}, {booking.p2}, {booking.p3} for {booking.court} at {submission_date}"
         )
 
         # Schedule submission in background
@@ -70,14 +93,14 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
             booking_info["id"],
             player_names,
             booking.court,
-            hour,
-            minute,
+            target_hour,
+            target_minute,
             booking.confirmation_email,
         )
 
         return BookingResponse(
             status="scheduled",
-            message=f"Booking scheduled for {booking.submit_time}",
+            message=f"Booking scheduled for {submission_date}",
             booking=booking_info,
             total_scheduled=len(get_all_bookings()),
         )

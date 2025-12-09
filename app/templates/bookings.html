@@ -70,11 +70,14 @@
       let cancelingBookingId = null;
 
       function isBookingPast(booking) {
-        const today = new Date();
-        const [hours, minutes] = booking.submit_time.split(":").map(Number);
-        const bookingTime = new Date();
-        bookingTime.setHours(hours, minutes, 0, 0);
-        return bookingTime < today;
+        if (!booking.scheduled_datetime) return false;
+        const now = new Date();
+        const bookingTime = new Date(booking.scheduled_datetime);
+        if (isNaN(bookingTime.getTime())) {
+          console.warn("Invalid date format:", booking.scheduled_datetime);
+          return false;
+        }
+        return bookingTime < now;
       }
 
       async function loadBookings() {
@@ -101,6 +104,7 @@
                     `;
           } else {
             bookingsList.innerHTML = allBookings
+              .reverse()
               .map((booking) => {
                 const isPast = isBookingPast(booking);
                 const statusText = isPast ? "Completed" : "Scheduled";
@@ -122,7 +126,7 @@
                                     </div>
                                     <div class="detail-item">
                                         <div class="detail-label">Submit Time</div>
-                                        <div class="detail-value">${booking.submit_time}</div>
+                                        <div class="detail-value">${booking.scheduled_datetime || booking.submit_time}</div>
                                     </div>
                                     <div class="detail-item">
                                         <div class="detail-label">Created</div>

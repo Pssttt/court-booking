@@ -54,6 +54,7 @@ def add_booking(
     court: str,
     submit_time: str,
     confirmation_email: Optional[str] = None,
+    scheduled_datetime: Optional[str] = None,
 ):
     """Add a new booking"""
     bookings = load_bookings()
@@ -65,6 +66,7 @@ def add_booking(
         "p3": p3,
         "court": court,
         "submit_time": submit_time,
+        "scheduled_datetime": scheduled_datetime,
         "confirmation_email": confirmation_email,
         "created_at": datetime.now().isoformat(),
     }
