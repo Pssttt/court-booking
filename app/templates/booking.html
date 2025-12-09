@@ -87,7 +87,6 @@
         try {
           const response = await fetch("/api/courts");
           const data = await response.json();
-          console.log(data);
 
           data.courts.forEach((court) => {
             const option = document.createElement("option");
