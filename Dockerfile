@@ -19,6 +19,6 @@ ENV PATH=/root/.local/bin:$PATH \
   PYTHONDONTWRITEBYTECODE=1
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=2 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/courts', timeout=3).close()" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/api/courts', timeout=3).close()" || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000"]

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from config.settings import COURTS, DEFAULT_SUBMIT_TIME, SERVER
+from config.settings import SERVER
 from app.routes import router
 
 TEMPLATES_DIR = Path(__file__).parent / "app" / "templates"

@@ -24,7 +24,7 @@ pip install -q -r requirements.txt
 
 echo ""
 echo "Ready to start!"
-echo "Opening http://localhost:8000"
+echo "Opening http://localhost:3000"
 echo "Edit config/settings.py to customize"
 echo ""
 

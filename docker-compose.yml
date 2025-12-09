@@ -24,7 +24,7 @@ services:
       CONFIRMATION_EMAIL: ${CONFIRMATION_EMAIL}
 
       SERVER_HOST: 0.0.0.0
-      SERVER_PORT: 8000
+      SERVER_PORT: 3000
       SERVER_DEBUG: "false"
 
     volumes:
@@ -36,7 +36,7 @@ services:
       - court-booking-network
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/courts"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/courts"]
       interval: 30s
       timeout: 10s
       retries: 3
