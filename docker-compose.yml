@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  court-booking-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: court-booking-webapp
+    ports:
+      - "8000:8000"
+    environment:
+      GOOGLE_FORM_SUBMIT_URL: ${GOOGLE_FORM_SUBMIT_URL}
+
+      BOOKING_PHONE: ${BOOKING_PHONE}
+      BOOKING_EMAIL: ${BOOKING_EMAIL}
+      BOOKING_STUDENT_CODE: ${BOOKING_STUDENT_CODE}
+      BOOKING_DEPARTMENT: ${BOOKING_DEPARTMENT}
+      BOOKING_FACULTY: ${BOOKING_FACULTY}
+      BOOKING_YEAR_OF_STUDY: ${BOOKING_YEAR_OF_STUDY}
+      BOOKING_DEGREE: ${BOOKING_DEGREE}
+      BOOKING_TYPE_OF_CLIENT: ${BOOKING_TYPE_OF_CLIENT}
+
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      CONFIRMATION_EMAIL: ${CONFIRMATION_EMAIL}
+
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8000
+      SERVER_DEBUG: "false"
+
+    volumes:
+      - booking_data:/app/data
+
+    restart: unless-stopped
+
+    networks:
+      - court-booking-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/courts"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  booking_data:
+    driver: local
+
+networks:
+  court-booking-network:
+    driver: bridge
