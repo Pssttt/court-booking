@@ -198,7 +198,11 @@ async def cancel_booking(request: CancelBookingRequest):
 
     cancel_task(request.booking_id)
 
-    delete_booking(request.booking_id)
+    if not delete_booking(request.booking_id):
+        logger.error(f"Failed to delete booking {request.booking_id} from database")
+        raise HTTPException(
+            status_code=500, detail="Failed to delete booking from database."
+        )
 
     logger.info(
         f"Cancelled booking {request.booking_id}: {booking['p1']}, {booking['p2']}, {booking['p3']}"
