@@ -238,7 +238,7 @@ async def request_cancel_code(request: CancelCodeRequest):
     code = generate_otp()
     store_otp(request.booking_id, code)
 
-    if send_otp_to_discord(request.booking_id, booking["p1"], code):
+    if send_otp_to_discord(request.booking_id, booking["p1"], code, otp_type="cancellation"):
         return {"message": "Verification code sent to Discord channel"}
     else:
         raise HTTPException(
