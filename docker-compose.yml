@@ -25,9 +25,6 @@ services:
       SERVER_PORT: 3000
       SERVER_DEBUG: "false"
 
-    volumes:
-      - booking_data:/app/data
-
     restart: unless-stopped
 
     healthcheck:
@@ -36,7 +33,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
-volumes:
-  booking_data:
-    driver: local
