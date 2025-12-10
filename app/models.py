@@ -55,3 +55,10 @@ class CancelCodeRequest(BaseModel):
     """Request to generate a cancellation code"""
 
     booking_id: int
+
+
+class BookingConfirmRequest(BaseModel):
+    """Request to confirm a booking with an OTP"""
+
+    booking_id: int
+    confirmation_code: str

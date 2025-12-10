@@ -51,6 +51,7 @@ def load_bookings() -> List[Dict[str, Any]]:
                     "created_at": b.created_at.isoformat() if b.created_at else None,
                     "booking_name": b.booking_name,
                     "booking_email": b.booking_email,
+                    "status": b.status,
                 }
                 result.append(b_dict)
             return result
@@ -104,6 +105,7 @@ def add_booking(
             booking_name=booking_name,
             booking_email=booking_email,
             created_at=datetime.now(),
+            status="pending",
         )
         session.add(new_booking)
         session.commit()
@@ -125,6 +127,7 @@ def add_booking(
             "created_at": new_booking.created_at.isoformat(),
             "booking_name": new_booking.booking_name,
             "booking_email": new_booking.booking_email,
+            "status": new_booking.status,
         }
     except Exception as e:
         logger.error(f"DB Add Error: {e}")
@@ -162,6 +165,7 @@ def get_booking(booking_id: int):
                     "created_at": b.created_at.isoformat() if b.created_at else None,
                     "booking_name": b.booking_name,
                     "booking_email": b.booking_email,
+                    "status": b.status,
                 }
             return None
         except Exception as e:
@@ -170,6 +174,29 @@ def get_booking(booking_id: int):
         finally:
             session.close()
     return None
+
+
+def update_booking_status(booking_id: int, new_status: str) -> bool:
+    """Update the status of a specific booking"""
+    session = get_db_session()
+    if not session:
+        logger.error("No database session available for updating booking status")
+        return False
+    try:
+        booking = session.query(DBBooking).filter(DBBooking.id == booking_id).first()
+        if booking:
+            booking.status = new_status
+            session.commit()
+            logger.info(f"Booking {booking_id} status updated to {new_status}")
+            return True
+        logger.warning(f"Booking {booking_id} not found for status update")
+        return False
+    except Exception as e:
+        logger.error(f"DB Update Status Error for booking {booking_id}: {e}")
+        session.rollback()
+        return False
+    finally:
+        session.close()
 
 
 def delete_booking(booking_id: int):

@@ -14,9 +14,16 @@ from app.models import (
     BookingResponse,
     CancelBookingRequest,
     CancelCodeRequest,
+    BookingConfirmRequest,
 )
 from app.services import wait_until_and_submit, FormSubmissionError, cancel_task
-from app.storage import add_booking, get_all_bookings, delete_booking, get_booking
+from app.storage import (
+    add_booking,
+    get_all_bookings,
+    delete_booking,
+    get_booking,
+    update_booking_status,
+)
 from app.discord_service import (
     generate_otp,
     store_otp,
@@ -101,6 +108,7 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
                 and b.get("p3") == booking.p3
                 and datetime.fromisoformat(b["created_at"])
                 > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
+                and b.get("status") != "cancelled"
             ):
                 raise ValueError(
                     "Duplicate booking detected for these players and court."
@@ -160,8 +168,8 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
         )
 
         return BookingResponse(
-            status="scheduled",
-            message=f"Booking scheduled for {submission_date}",
+            status="pending",
+            message=f"Booking scheduled for {submission_date} (pending confirmation)",
             booking=booking_info,
             total_scheduled=len(get_all_bookings()),
         )
@@ -193,6 +201,39 @@ async def get_courts():
     return {"courts": COURTS}
 
 
+@router.post("/confirm-booking")
+async def confirm_booking(request: BookingConfirmRequest):
+    """
+    Confirm a pending booking using an OTP.
+    """
+    booking = get_booking(request.booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking["status"] != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Booking is not pending confirmation (current status: {booking['status']})",
+        )
+
+    if not verify_otp(request.booking_id, request.confirmation_code):
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired confirmation code"
+        )
+
+    if not update_booking_status(request.booking_id, "confirmed"):
+        raise HTTPException(status_code=500, detail="Failed to update booking status.")
+
+    logger.info(f"Booking {request.booking_id} confirmed successfully.")
+
+    return {
+        "status": "confirmed",
+        "message": f"Booking {request.booking_id} has been confirmed.",
+        "booking": get_booking(request.booking_id),
+        "total_scheduled": len(get_all_bookings()),
+    }
+
+
 @router.delete("/cancel")
 async def cancel_booking(request: CancelBookingRequest):
     """
@@ -222,8 +263,13 @@ async def cancel_booking(request: CancelBookingRequest):
 
     if not delete_booking(request.booking_id):
         logger.error(f"Failed to delete booking {request.booking_id} from database")
+
+    if not update_booking_status(request.booking_id, "cancelled"):
+        logger.error(
+            f"Failed to update booking {request.booking_id} status to cancelled in database"
+        )
         raise HTTPException(
-            status_code=500, detail="Failed to delete booking from database."
+            status_code=500, detail="Failed to update booking status to cancelled."
         )
 
     logger.info(
