@@ -5,10 +5,17 @@
 }
 
 .booking-card {
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    padding: 20px;
-    background: #fafafa;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    padding: 24px;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.booking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .booking-card.submitted {
