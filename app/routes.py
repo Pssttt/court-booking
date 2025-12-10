@@ -7,9 +7,20 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
 from datetime import datetime, timedelta
 
-from app.models import BookingRequest, BookingResponse, CancelBookingRequest
+from app.models import (
+    BookingRequest,
+    BookingResponse,
+    CancelBookingRequest,
+    CancelCodeRequest,
+)
 from app.services import wait_until_and_submit, FormSubmissionError, cancel_task
 from app.storage import add_booking, get_all_bookings, delete_booking, get_booking
+from app.discord_service import (
+    generate_otp,
+    store_otp,
+    send_otp_to_discord,
+    verify_otp,
+)
 from config.settings import COURTS, CANCEL_PASSWORD
 
 logger = logging.getLogger(__name__)
@@ -132,11 +143,19 @@ async def cancel_booking(request: CancelBookingRequest):
     Cancel a scheduled booking
 
     Requires password authentication for security.
+    Accepts either the master CANCEL_PASSWORD or a dynamic OTP sent via Discord.
     Cancels the scheduled background task immediately.
     """
-    if request.password != CANCEL_PASSWORD:
+    is_authorized = False
+
+    if request.password == CANCEL_PASSWORD:
+        is_authorized = True
+    elif verify_otp(request.booking_id, request.password):
+        is_authorized = True
+
+    if not is_authorized:
         logger.warning(f"Failed cancel attempt for booking {request.booking_id}")
-        raise HTTPException(status_code=401, detail="Invalid password")
+        raise HTTPException(status_code=401, detail="Invalid password or expired code")
 
     booking = get_booking(request.booking_id)
     if not booking:
@@ -157,3 +176,24 @@ async def cancel_booking(request: CancelBookingRequest):
         "booking": booking,
         "total_scheduled": len(get_all_bookings()),
     }
+
+
+@router.post("/request-cancel-code")
+async def request_cancel_code(request: CancelCodeRequest):
+    """
+    Request a dynamic cancellation code (OTP) via Discord
+    """
+    booking = get_booking(request.booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    code = generate_otp()
+    store_otp(request.booking_id, code)
+
+    if send_otp_to_discord(request.booking_id, booking["p1"], code):
+        return {"message": "Verification code sent to Discord channel"}
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send verification code. Check server logs.",
+        )

@@ -38,3 +38,9 @@ class CancelBookingRequest(BaseModel):
 
     booking_id: int
     password: str
+
+
+class CancelCodeRequest(BaseModel):
+    """Request to generate a cancellation code"""
+
+    booking_id: int
