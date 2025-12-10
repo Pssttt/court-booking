@@ -250,15 +250,15 @@
                 
                 return `
                     <tr>
-                        <td style="color: #718096; font-size: 12px;">#${booking.id}</td>
-                        <td>
+                        <td data-label="ID" style="color: #718096; font-size: 12px;">#${booking.id}</td>
+                        <td data-label="Players">
                             <div style="font-weight: 500;">${p1}</div>
                             <div style="font-size: 12px; color: #718096;">${p2}, ${p3}</div>
                         </td>
-                        <td>${displayCourtName}</td>
-                        <td>${booking.scheduled_datetime || booking.submit_time}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
+                        <td data-label="Court">${displayCourtName}</td>
+                        <td data-label="Time">${booking.scheduled_datetime || booking.submit_time}</td>
+                        <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td data-label="Action">
                             ${!isPast ? `
                                 <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">
                                     Cancel
@@ -348,6 +348,13 @@
 
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") closeCancelModal();
+      });
+
+      document.getElementById("cancelPassword").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            confirmCancel();
+        }
       });
 
       loadBookings();

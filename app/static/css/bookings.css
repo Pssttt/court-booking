@@ -1,178 +1,267 @@
 .bookings-container {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    overflow: hidden; /* For rounded corners on the table */
-    border: 1px solid #edf2f7;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  border: 1px solid #edf2f7;
 }
 
 table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    text-align: left;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
 }
 
 thead {
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 th {
-    padding: 16px 20px; /* Increased horizontal padding */
-    font-weight: 700;
-    color: #4a5568;
-    text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.5px;
+  padding: 16px 20px;
+  font-weight: 700;
+  color: #4a5568;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 td {
-    padding: 14px 20px; /* Increased horizontal padding to match headers */
-    border-bottom: 1px solid #ebf4f1;
-    color: #4a5568;
+  padding: 14px 20px;
+  border-bottom: 1px solid #ebf4f1;
+  color: #4a5568;
 }
 
 tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 tr:hover {
-    background-color: #f7fafc;
+  background-color: #f7fafc;
 }
 
 /* Status Badge */
 .status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .status-badge.scheduled {
-    background: #fff3cd;
-    color: #856404;
+  background: #fff3cd;
+  color: #856404;
 }
 
 .status-badge.submitted {
-    background: #d4edda;
-    color: #155724;
+  background: #d4edda;
+  color: #155724;
 }
 
 /* Action Button */
 .cancel-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    background: #fff5f5;
-    color: #c00;
-    border: 1px solid #ffb0b0;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #fff5f5;
+  color: #c00;
+  border: 1px solid #ffb0b0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .cancel-btn:hover {
-    background: #ffe0e0;
-    border-color: #ff8080;
+  background: #ffe0e0;
+  border-color: #ff8080;
 }
 
 /* Responsive Table: Scroll on mobile */
 .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #999;
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
 }
 
-/* Modal styles (kept from before) */
 .modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
 .modal.active {
-    display: flex;
+  display: flex;
 }
 
 .modal-content {
-    background: #fff;
-    border-radius: 6px;
-    padding: 24px;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 6px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .modal-header {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: #1a202c;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1a202c;
 }
 
 .modal-body {
-    font-size: 14px;
-    color: #4a5568;
-    margin-bottom: 24px;
+  font-size: 14px;
+  color: #4a5568;
+  margin-bottom: 24px;
 }
 
 .modal-footer {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 .modal-btn {
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .modal-btn.cancel {
-    background: #edf2f7;
-    color: #4a5568;
-    border: none;
+  background: #edf2f7;
+  color: #4a5568;
+  border: none;
 }
 
 .modal-btn.cancel:hover {
-    background: #e2e8f0;
+  background: #e2e8f0;
 }
 
 .modal-btn.confirm {
-    background: #e53e3e;
-    color: #fff;
-    border: none;
+  background: #e53e3e;
+  color: #fff;
+  border: none;
 }
 
 .modal-btn.confirm:hover {
-    background: #c53030;
+  background: #c53030;
 }
 
 .password-input {
-    width: 100%;
-    padding: 8px 12px;
-    font-size: 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  margin-top: 4px;
+}
+
+/* Mobile Card View for Table */
+@media screen and (max-width: 768px) {
+  .bookings-container {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  table,
+  thead,
+  tbody,
+  th,
+  td,
+  tr {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tr {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     margin-bottom: 16px;
-    margin-top: 4px;
+    border: 1px solid #edf2f7;
+    padding: 16px;
+  }
+
+  tr:hover {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  td {
+    padding: 8px 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    text-align: right;
+  }
+
+  td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #718096;
+    margin-right: 16px;
+    text-align: left;
+  }
+
+  td[data-label="ID"] {
+    display: none;
+  }
+
+  td[data-label="Players"] {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf2f7;
+    margin-bottom: 8px;
+  }
+
+  td[data-label="Players"]::before {
+    display: none;
+  }
+
+  td[data-label="Action"] {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #edf2f7;
+    justify-content: center;
+  }
+
+  td[data-label="Action"]::before {
+    display: none;
+  }
+
+  .cancel-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+  }
 }
