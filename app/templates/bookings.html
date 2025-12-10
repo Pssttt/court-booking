@@ -24,37 +24,43 @@
       <div class="message success" id="success"></div>
       <div class="message error" id="error"></div>
 
-      <div class="search-bar" style="margin-bottom: 20px;">
-        <input 
-            type="text" 
-            id="searchInput" 
-            placeholder="Search bookings by player name or ID..."
-            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
-            onkeyup="filterBookings()"
-        >
+      <div class="search-bar" style="margin-bottom: 20px">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search bookings by player name or ID..."
+          style="
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+          "
+          onkeyup="filterBookings()"
+        />
       </div>
 
       <div class="loading" id="loading" style="display: none">
         Loading bookings...
       </div>
-      
+
       <div class="bookings-container">
         <div class="table-wrapper">
-            <table id="bookingsTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Players</th>
-                        <th>Court</th>
-                        <th>Auto-Submit Time</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="bookingsList">
-                    <!-- Rows will be inserted here -->
-                </tbody>
-            </table>
+          <table id="bookingsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Players</th>
+                <th>Court</th>
+                <th>Auto-Submit Time</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsList">
+              <!-- Rows will be inserted here -->
+            </tbody>
+          </table>
         </div>
       </div>
       <div id="emptyStateContainer"></div>
@@ -68,32 +74,52 @@
           <p style="margin-top: 12px; font-size: 12px; color: #999">
             <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
           </p>
-          <p style="margin-top: 8px; font-size: 12px">
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to cancel this booking?</p>
+
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
+          </p>
+
+          <div style="margin-top: 8px; font-size: 12px">
             <label
               for="cancelPassword"
               style="display: block; margin-bottom: 6px"
               >Cancel Password / OTP:</label
             >
-            <div style="display: flex; gap: 8px;">
-                <input
+            <div style="display: flex; gap: 8px">
+              <input
                 type="password"
                 id="cancelPassword"
                 class="password-input"
                 placeholder="Enter password or OTP"
-                style="margin-bottom: 0;"
-                />
-                <button 
-                    type="button" 
-                    id="requestCodeBtn"
-                    onclick="requestCancelCode()"
-                    style="padding: 0 12px; font-size: 12px; white-space: nowrap; cursor: pointer; background: #5865F2; color: white; border: none; border-radius: 2px;"
-                    title="Get OTP via Discord"
-                >
-                    Get Code
-                </button>
+                style="margin-bottom: 0"
+              />
+              <button
+                type="button"
+                id="requestCodeBtn"
+                onclick="requestCancelCode()"
+                style="
+                  padding: 0 12px;
+                  font-size: 12px;
+                  white-space: nowrap;
+                  cursor: pointer;
+                  background: #5865f2;
+                  color: white;
+                  border: none;
+                  border-radius: 2px;
+                "
+                title="Get OTP via Discord"
+              >
+                Get Code
+              </button>
             </div>
-            <div id="requestCodeMsg" style="font-size: 11px; margin-top: 4px; display: none;"></div>
-          </p>
+            <div
+              id="requestCodeMsg"
+              style="font-size: 11px; margin-top: 4px; display: none"
+            ></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="modal-btn cancel" onclick="closeCancelModal()">
@@ -113,52 +139,74 @@
     <script>
       let allBookings = [];
       let cancelingBookingId = null;
+      let otpRateLimitSeconds = 60;
+      let otpCountdownInterval = null;
 
-      function isBookingPast(booking) {
-        if (!booking.scheduled_datetime) return false;
-        const now = new Date();
-        const bookingTime = new Date(booking.scheduled_datetime);
-        if (isNaN(bookingTime.getTime())) {
-          console.warn("Invalid date format:", booking.scheduled_datetime);
-          return false;
-        }
-        return bookingTime < now;
+      function startOtpCountdown() {
+        const btn = document.getElementById("requestCodeBtn");
+        const msg = document.getElementById("requestCodeMsg");
+        let timeLeft = otpRateLimitSeconds;
+
+        btn.disabled = true;
+        msg.style.display = "block";
+        msg.style.color = "#007bff";
+
+        otpCountdownInterval = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(otpCountdownInterval);
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.textContent = "Get Code";
+                msg.style.display = "none";
+                return;
+            }
+            btn.textContent = `Resend in ${timeLeft}s`;
+            timeLeft--;
+        }, 1000);
       }
 
       async function requestCancelCode() {
         if (!cancelingBookingId) return;
-        
+
         const btn = document.getElementById("requestCodeBtn");
         const msg = document.getElementById("requestCodeMsg");
-        
+
+        if (btn.disabled && !otpCountdownInterval) return;
+
+        clearInterval(otpCountdownInterval);
         btn.disabled = true;
         btn.style.opacity = "0.7";
+        btn.textContent = "Sending...";
         msg.style.display = "none";
-        
+
         try {
             const response = await fetch("/api/request-cancel-code", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ booking_id: cancelingBookingId }),
             });
-            
+
             const data = await response.json();
-            
+
             msg.style.display = "block";
             if (response.ok) {
                 msg.style.color = "#155724";
                 msg.textContent = "Code sent to Discord channel!";
+                startOtpCountdown();
             } else {
                 msg.style.color = "#c00";
                 msg.textContent = data.detail || "Failed to send code";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.textContent = "Get Code";
             }
         } catch (error) {
             msg.style.display = "block";
             msg.style.color = "#c00";
             msg.textContent = "Error: " + error.message;
-        } finally {
             btn.disabled = false;
             btn.style.opacity = "1";
+            btn.textContent = "Get Code";
         }
       }
 
@@ -241,13 +289,13 @@
                 const isPast = isBookingPast(booking);
                 const statusText = isPast ? "Completed" : "Scheduled";
                 const statusClass = isPast ? "submitted" : "scheduled";
-                
+
                 const p1 = escapeHtml(booking.p1);
                 const p2 = escapeHtml(booking.p2);
                 const p3 = escapeHtml(booking.p3);
 
                 const displayCourtName = booking.alias || booking.court;
-                
+
                 let displayTime = booking.submit_time;
                 if (booking.scheduled_datetime) {
                     const dateObj = new Date(booking.scheduled_datetime);
@@ -286,7 +334,7 @@
 
             infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
             infoMsg.style.display = "block";
-            
+
             if (currentQuery) {
                 filterBookings();
             }

@@ -22,6 +22,8 @@ from app.discord_service import (
     store_otp,
     send_otp_to_discord,
     verify_otp,
+    check_otp_request_rate_limit,
+    RateLimitExceededError,
 )
 from config.settings import COURTS, CANCEL_PASSWORD
 
@@ -224,6 +226,11 @@ async def request_cancel_code(request: CancelCodeRequest):
     """
     Request a dynamic cancellation code (OTP) via Discord
     """
+    try:
+        check_otp_request_rate_limit(request.booking_id)
+    except RateLimitExceededError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+
     booking = get_booking(request.booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")

@@ -14,7 +14,36 @@ from config.settings import DISCORD_CONFIG
 logger = logging.getLogger(__name__)
 
 _otp_store = {}
+_otp_request_timestamps = {}
 OTP_VALIDITY_SECONDS = 300  # 5 minutes
+
+OTP_REQUEST_RATE_LIMIT_SECONDS = 60
+
+
+class RateLimitExceededError(Exception):
+    """Custom exception for when a rate limit is exceeded"""
+
+    pass
+
+
+def check_otp_request_rate_limit(booking_id: int) -> None:
+    """
+    Checks and enforces a rate limit for OTP requests per booking ID.
+    Raises RateLimitExceededError if the limit is exceeded.
+    """
+
+    now = time.time()
+    last_request_time = _otp_request_timestamps.get(booking_id)
+
+    if (
+        last_request_time is not None
+        and (now - last_request_time) < OTP_REQUEST_RATE_LIMIT_SECONDS
+    ):
+        raise RateLimitExceededError(
+            f"Rate limit exceeded for booking {booking_id}. Please wait before requesting another OTP."
+        )
+
+    _otp_request_timestamps[booking_id] = now
 
 
 def generate_otp() -> str:
