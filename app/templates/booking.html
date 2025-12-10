@@ -172,7 +172,25 @@
         return isValid;
       }
 
+      function loadSavedPlayers() {
+        const savedData = localStorage.getItem("booking.psstee");
+        if (savedData) {
+          try {
+            const players = JSON.parse(savedData);
+            if (players.p1) document.getElementById("p1").value = players.p1;
+            if (players.p2) document.getElementById("p2").value = players.p2;
+            if (players.p3) document.getElementById("p3").value = players.p3;
+            if (players.email)
+              document.getElementById("confirmationEmail").value =
+                players.email;
+          } catch (e) {
+            console.error("Error loading saved players:", e);
+          }
+        }
+      }
+
       loadCourts();
+      loadSavedPlayers();
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -208,6 +226,16 @@
           const data = await response.json();
 
           if (response.ok) {
+            localStorage.setItem(
+              "booking.psstee",
+              JSON.stringify({
+                p1: formData.p1,
+                p2: formData.p2,
+                p3: formData.p3,
+                email: formData.confirmation_email,
+              }),
+            );
+
             successMsg.textContent = `Booking confirmed for ${formData.p1}, ${formData.p2}, ${formData.p3} at ${formData.submit_time}`;
             successMsg.style.display = "block";
             form.reset();
@@ -217,6 +245,8 @@
             clearError("p3");
             clearError("court");
             document.getElementById("submitTime").value = "13:00";
+
+            loadSavedPlayers();
           } else {
             errorMsg.textContent = `Error: ${data.detail || "Failed to schedule booking"}`;
             errorMsg.style.display = "block";
