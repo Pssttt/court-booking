@@ -56,34 +56,42 @@ COURTS = [
     {
         "id": "1",
         "name": "คอร์ทที่ 1   รอบที่ 1  เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+        "alias": "Court 1, 1st Period (17:30 - 18:30)",
     },
     {
         "id": "2",
         "name": "คอร์ทที่ 1   รอบที่ 2  เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+        "alias": "Court 1, 2nd Period (18:45 - 19:45)",
     },
     {
         "id": "3",
         "name": "คอร์ทที่ 2   รอบที่ 1  เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+        "alias": "Court 2, 1st Period (17:30 - 18:30)",
     },
     {
         "id": "4",
         "name": "คอร์ทที่ 2   รอบที่ 2  เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+        "alias": "Court 2, 2nd Period (18:45 - 19:45)",
     },
     {
         "id": "5",
         "name": "คอร์ทที่ 3   รอบที่ 1  เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+        "alias": "Court 3, 1st Period (17:30 - 18:30)",
     },
     {
         "id": "6",
         "name": "คอร์ทที่ 3   รอบที่ 2  เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+        "alias": "Court 3, 2nd Period (18:45 - 19:45)",
     },
     {
         "id": "7",
         "name": "คอร์ทที่ 4   รอบที่ 1  เวลา 17.30 – 18.30 น. | Court no.1: 1st Period: 17.30-18.30 hrs.",
+        "alias": "Court 4, 1st Period (17:30 - 18:30)",
     },
     {
         "id": "8",
         "name": "คอร์ทที่ 4   รอบที่ 2  เวลา 18.45 – 19.45 น. | Court no.1: 2nd Period: 18.45-19.45 hrs.",
+        "alias": "Court 4, 2nd Period (18:45 - 19:45)",
     },
 ]
 

@@ -103,21 +103,10 @@
           const response = await fetch("/api/courts");
           const data = await response.json();
 
-          const courtDisplayNames = {
-            1: "Court 1, 1st Period",
-            2: "Court 1, 2nd Period",
-            3: "Court 2, 1st Period",
-            4: "Court 2, 2nd Period",
-            5: "Court 3, 1st Period",
-            6: "Court 3, 2nd Period",
-            7: "Court 4, 1st Period",
-            8: "Court 4, 2nd Period",
-          };
-
           data.courts.forEach((court) => {
             const option = document.createElement("option");
             option.value = court.name;
-            option.textContent = courtDisplayNames[court.id] || court.name;
+            option.textContent = court.alias || court.name;
             courtSelect.appendChild(option);
           });
         } catch (error) {
