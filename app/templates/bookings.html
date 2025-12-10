@@ -112,6 +112,7 @@
               id="requestCodeMsg"
               style="font-size: 11px; margin-top: 4px; display: none"
             ></div>
+            <div id="cancelOtpErrorMsg" style="font-size: 11px; margin-top: 4px; display: none; color: #c00;"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -131,10 +132,10 @@
 
     <div class="modal" id="requestConfirmCodeModal">
       <div class="modal-content">
-        <div class="modal-header">Request Confirmation Code</div>
+        <div class="modal-header">Confirm Pending Booking</div>
         <div class="modal-body">
           <p>
-            You can request a confirmation code for Booking
+            You can request a new confirmation code for Booking
             <strong id="requestConfirmBookingInfo"></strong>.
           </p>
           <p style="margin-top: 8px; font-size: 12px">
@@ -142,11 +143,12 @@
           </p>
 
           <div style="margin-top: 8px; font-size: 12px">
-            <div style="display: flex; gap: 8px">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px">
               <button
                 type="button"
                 id="requestConfirmCodeBtn"
                 onclick="requestConfirmCodeFromBookingsPage()"
+                class="action-btn request-confirm-btn"
                 style="
                   padding: 0 12px;
                   font-size: 12px;
@@ -161,10 +163,32 @@
               >
                 Get Code
               </button>
+              <div
+                id="requestConfirmCodeMsg"
+                style="font-size: 11px; margin-top: 4px; display: none"
+              ></div>
             </div>
+
+            <label
+              for="confirmBookingOtpInput"
+              style="display: block; margin-bottom: 6px"
+              >Confirmation OTP:</label
+            >
+            <input
+              type="text"
+              id="confirmBookingOtpInput"
+              class="password-input"
+              placeholder="Enter OTP to confirm"
+              style="margin-bottom: 0"
+            />
             <div
-              id="requestConfirmCodeMsg"
-              style="font-size: 11px; margin-top: 4px; display: none"
+              id="confirmBookingOtpErrorMsg"
+              style="
+                font-size: 11px;
+                margin-top: 4px;
+                display: none;
+                color: #c00;
+              "
             ></div>
           </div>
         </div>
@@ -174,6 +198,13 @@
             onclick="closeRequestConfirmCodeModal()"
           >
             Close
+          </button>
+          <button
+            class="modal-btn confirm"
+            onclick="confirmBookingFromBookingsPage()"
+            id="confirmBookingFromBookingsPageBtn"
+          >
+            Confirm Booking
           </button>
         </div>
       </div>
@@ -268,11 +299,6 @@
         }
       }
 
-      let requestConfirmingBookingId = null;
-      let requestConfirmingPlayerName = null;
-      let requestConfirmingCourtName = null;
-      let requestConfirmingBookingTime = null;
-
       function openRequestConfirmCodeModal(
         bookingId,
         playerName,
@@ -287,9 +313,13 @@
         document.getElementById("requestConfirmBookingInfo").textContent =
           `#${bookingId} - ${playerName} (${courtName} at ${bookingTime})`;
         document.getElementById("requestConfirmCodeMsg").style.display = "none";
+        document.getElementById("confirmBookingOtpInput").value = "";
+        document.getElementById("confirmBookingOtpErrorMsg").style.display =
+          "none";
         document
           .getElementById("requestConfirmCodeModal")
           .classList.add("active");
+        document.getElementById("confirmBookingOtpInput").focus();
       }
 
       function closeRequestConfirmCodeModal() {
@@ -355,6 +385,61 @@
           btn.disabled = false;
           btn.style.opacity = "1";
           btn.textContent = "Get Code";
+        }
+      }
+
+      async function confirmBookingFromBookingsPage() {
+        if (!requestConfirmingBookingId) return;
+
+        const otp = document.getElementById("confirmBookingOtpInput").value;
+        if (!otp) {
+          document.getElementById("confirmBookingOtpErrorMsg").textContent =
+            "Please enter the OTP.";
+          document.getElementById("confirmBookingOtpErrorMsg").style.display =
+            "block";
+          return;
+        }
+
+        const confirmBtn = document.getElementById(
+          "confirmBookingFromBookingsPageBtn",
+        );
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirming...";
+        document.getElementById("confirmBookingOtpErrorMsg").style.display =
+          "none";
+
+        try {
+          const response = await fetch("/api/confirm-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking_id: requestConfirmingBookingId,
+              confirmation_code: otp,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            document.getElementById("success").textContent =
+              `Booking #${requestConfirmingBookingId} confirmed successfully!`;
+            document.getElementById("success").style.display = "block";
+            closeRequestConfirmCodeModal();
+            loadBookings();
+          } else {
+            document.getElementById("confirmBookingOtpErrorMsg").textContent =
+              data.detail || "Failed to confirm booking.";
+            document.getElementById("confirmBookingOtpErrorMsg").style.display =
+              "block";
+          }
+        } catch (error) {
+          document.getElementById("confirmBookingOtpErrorMsg").textContent =
+            `Error: ${error.message}`;
+          document.getElementById("confirmBookingOtpErrorMsg").style.display =
+            "block";
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Confirm Booking";
         }
       }
 
@@ -497,10 +582,11 @@
                         <td data-label="Time">${displayTime}</td>
                         <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td data-label="Action">
+                            <div class="action-buttons-group">
                             ${
                               booking.status === "pending"
                                 ? `
-                                <button class="action-btn request-confirm-btn" onclick="openRequestConfirmCodeModal(${booking.id}, '${p1.replace(/'/g, "\\'")}', '${displayCourtName.replace(/'/g, "\\'")}', '${displayTime}')">
+                                <button class="action-btn request-confirm-btn" onclick="openRequestConfirmCodeModal(${booking.id}, '${p1.replace(/'/g, "\'")}', '${displayCourtName.replace(/'/g, "\'")}', '${displayTime}')">
                                     Request Confirm Code
                                 </button>
                                 `
@@ -510,12 +596,13 @@
                               booking.status !== "cancelled" &&
                               booking.status !== "submitted"
                                 ? `
-                                <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">
+                                <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\'")}')">
                                     Cancel
                                 </button>
                             `
                                 : ""
                             }
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -585,9 +672,9 @@
             closeCancelModal();
             await loadBookings();
           } else {
-            document.getElementById("error").textContent =
+            document.getElementById("cancelOtpErrorMsg").textContent =
               data.detail || "Failed to cancel booking";
-            document.getElementById("error").style.display = "block";
+            document.getElementById("cancelOtpErrorMsg").style.display = "block";
           }
         } catch (error) {
           document.getElementById("error").textContent =
@@ -612,6 +699,15 @@
           if (e.key === "Enter") {
             e.preventDefault();
             confirmCancel();
+          }
+        });
+
+      document
+        .getElementById("confirmBookingOtpInput")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBookingFromBookingsPage();
           }
         });
 

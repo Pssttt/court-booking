@@ -10,7 +10,7 @@ import string
 import time
 from datetime import datetime
 from typing import Optional
-from config.settings import DISCORD_CONFIG
+from config.settings import COURTS, DISCORD_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,15 @@ def send_otp_to_discord(
         ]
 
         if otp_type == "confirmation" and court_name and booking_time:
-            fields.insert(2, {"name": "Court", "value": court_name, "inline": True})
+            display_court_name = court_name
+            for court_data in COURTS:
+                if court_data["name"] == court_name:
+                    display_court_name = court_data.get("alias", court_name)
+                    break
+
+            fields.insert(
+                2, {"name": "Court", "value": display_court_name, "inline": True}
+            )
             fields.insert(
                 3,
                 {

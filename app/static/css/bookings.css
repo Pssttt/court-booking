@@ -153,35 +153,6 @@ tr:hover {
   justify-content: flex-end;
 }
 
-.modal-btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.modal-btn.cancel {
-  background: #edf2f7;
-  color: #4a5568;
-  border: none;
-}
-
-.modal-btn.cancel:hover {
-  background: #e2e8f0;
-}
-
-.modal-btn.confirm {
-  background: #e53e3e;
-  color: #fff;
-  border: none;
-}
-
-.modal-btn.confirm:hover {
-  background: #c53030;
-}
-
 .password-input {
   width: 100%;
   padding: 8px 12px;
@@ -267,7 +238,9 @@ tr:hover {
     margin-top: 8px;
     padding-top: 12px;
     border-top: 1px solid #edf2f7;
+    display: flex;
     justify-content: center;
+    align-items: center;
   }
 
   td[data-label="Action"]::before {
@@ -275,8 +248,37 @@ tr:hover {
   }
 
   .cancel-btn {
-    width: 100%;
     text-align: center;
     padding: 10px;
   }
+}
+
+/* Container for action buttons */
+.action-buttons-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Specific styling for the Request Confirm Code button */
+.action-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+}
+
+.request-confirm-btn {
+  background: #5865f2;
+  color: white;
+  border-color: #5865f2;
+}
+
+.request-confirm-btn:hover {
+  background: #4752c4;
+  border-color: #4752c4;
 }
