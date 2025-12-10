@@ -6,6 +6,7 @@ import requests
 import logging
 from typing import Optional
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import time
 from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
@@ -13,6 +14,7 @@ from app.email_service import send_confirmation_email
 logger = logging.getLogger(__name__)
 
 active_tasks = {}
+TZ_BANGKOK = ZoneInfo("Asia/Bangkok")
 
 
 class FormSubmissionError(Exception):
@@ -160,7 +162,7 @@ def wait_until_and_submit(
                 logger.info(f"Task for booking {booking_id} was cancelled")
                 raise TaskCancelled(f"Booking {booking_id} was cancelled")
 
-            now = datetime.now()
+            now = datetime.now(TZ_BANGKOK)
             if now.hour == target_hour and now.minute == target_minute:
                 logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
                 result = submit_form(

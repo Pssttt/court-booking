@@ -219,8 +219,8 @@
         emptyStateContainer.innerHTML = "";
         infoMsg.style.display = "none";
 
-        try {
-          const response = await fetch("/api/bookings");
+        try:
+          const response = await fetch(`/api/bookings?t=${new Date().getTime()}`);
           const data = await response.json();
           allBookings = data.bookings || [];
 

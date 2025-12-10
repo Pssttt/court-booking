@@ -6,7 +6,8 @@ All endpoints are defined here
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
 import html
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from app.models import (
     BookingRequest,
@@ -28,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["booking"])
 
+TZ_BANGKOK = ZoneInfo("Asia/Bangkok")
+
 
 def parse_time(time_str: str) -> tuple[int, int]:
     """Parse time string 'HH:MM' to (hour, minute)"""
@@ -45,7 +48,7 @@ def get_next_submission_time(hour: int, minute: int) -> tuple[int, int, str]:
     Returns:
         Tuple of (target_hour, target_minute, submission_date_str)
     """
-    now = datetime.now()
+    now = datetime.now(TZ_BANGKOK)
     target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     if target_time.hour == now.hour and target_time.minute == now.minute:
@@ -95,7 +98,7 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
                 and b.get("p2") == booking.p2
                 and b.get("p3") == booking.p3
                 and datetime.fromisoformat(b["created_at"])
-                > datetime.now() - timedelta(hours=24)
+                > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
             ):
                 raise ValueError(
                     "Duplicate booking detected for these players and court."
