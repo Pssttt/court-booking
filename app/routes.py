@@ -84,6 +84,21 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
         if booking.court not in valid_courts:
             raise ValueError(f"Invalid court. Must be one of: {valid_courts}")
 
+        # Check for duplicate booking
+        current_bookings = get_all_bookings()
+        for b in current_bookings:
+            if (
+                b.get("court") == booking.court
+                and b.get("p1") == booking.p1
+                and b.get("p2") == booking.p2
+                and b.get("p3") == booking.p3
+                and datetime.fromisoformat(b["created_at"])
+                > datetime.now() - timedelta(hours=24)
+            ):
+                raise ValueError(
+                    "Duplicate booking detected for these players and court."
+                )
+
         player_names = {
             "p1": booking.p1,
             "p2": booking.p2,
