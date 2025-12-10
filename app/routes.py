@@ -116,6 +116,8 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
             booking.submit_time,
             booking.confirmation_email,
             submission_date,
+            booking.phone,
+            booking.student_id,
         )
 
         logger.info(
@@ -131,6 +133,8 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
             target_hour,
             target_minute,
             booking.confirmation_email,
+            booking.phone,
+            booking.student_id,
         )
 
         return BookingResponse(

@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 from datetime import datetime
 import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
+from config.settingstest import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,11 @@ class TaskCancelled(Exception):
 
 
 def submit_form(
-    player_names: dict, court_time: str, user_email: Optional[str] = None
+    player_names: dict,
+    court_time: str,
+    user_email: Optional[str] = None,
+    phone: Optional[str] = None,
+    student_id: Optional[str] = None,
 ) -> bool:
     """
     Submit booking form to Google Form
@@ -37,6 +41,8 @@ def submit_form(
         player_names: {"p1": "Name1", "p2": "Name2", "p3": "Name3"}
         court_time: Selected court and time slot
         user_email: Optional user email for confirmation
+        phone: Optional phone number
+        student_id: Optional student ID
 
     Returns:
         True if successful, False otherwise
@@ -50,16 +56,20 @@ def submit_form(
         if user_email:
             booking_name = player_names.get("p1")
             booking_email = user_email
+            booking_phone = phone
+            booking_student_code = student_id
         else:
             booking_name = BOOKING_DATA["name"]
             booking_email = BOOKING_DATA["email"]
+            booking_phone = BOOKING_DATA["phone"]
+            booking_student_code = BOOKING_DATA["student_code"]
 
         payload = {
             field_ids["name"]: booking_name,
-            field_ids["phone"]: BOOKING_DATA["phone"],
+            field_ids["phone"]: booking_phone,
             field_ids["email"]: booking_email,
             field_ids["type_of_client"]: BOOKING_DATA["type_of_client"],
-            field_ids["student_code"]: BOOKING_DATA["student_code"],
+            field_ids["student_code"]: booking_student_code,
             field_ids["department"]: BOOKING_DATA["department"],
             field_ids["faculty"]: BOOKING_DATA["faculty"],
             field_ids["degree"]: BOOKING_DATA["degree"],
@@ -117,6 +127,8 @@ def wait_until_and_submit(
     target_hour: int,
     target_minute: int,
     user_email: Optional[str] = None,
+    phone: Optional[str] = None,
+    student_id: Optional[str] = None,
 ) -> bool:
     """
     Wait until target time, then submit form
@@ -130,6 +142,8 @@ def wait_until_and_submit(
         target_hour: Hour in 24-hour format (0-23)
         target_minute: Minute (0-59)
         user_email: Optional user email for confirmation
+        phone: Optional phone number
+        student_id: Optional student ID
 
     Returns:
         True if successful, False otherwise
@@ -149,7 +163,9 @@ def wait_until_and_submit(
             now = datetime.now()
             if now.hour == target_hour and now.minute == target_minute:
                 logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
-                result = submit_form(player_names, court_time, user_email)
+                result = submit_form(
+                    player_names, court_time, user_email, phone, student_id
+                )
                 active_tasks.pop(booking_id, None)
                 return result
 

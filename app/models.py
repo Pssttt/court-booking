@@ -2,7 +2,7 @@
 API Models and Data Validation
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional
 
 
@@ -15,6 +15,17 @@ class BookingRequest(BaseModel):
     court: str = Field(..., min_length=1)
     submit_time: str = "13:00"
     confirmation_email: Optional[str] = None
+    phone: Optional[str] = None
+    student_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def check_contact_info(self) -> "BookingRequest":
+        if self.confirmation_email:
+            if not self.phone:
+                raise ValueError("Phone number is required when email is provided")
+            if not self.student_id:
+                raise ValueError("Student ID is required when email is provided")
+        return self
 
 
 class BookingResponse(BaseModel):
