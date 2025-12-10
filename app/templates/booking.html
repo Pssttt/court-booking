@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Court Booking</title>
+    <title>KMUTT Court Booking</title>
     <link rel="stylesheet" href="/static/css/shared.css" />
     <link rel="stylesheet" href="/static/css/booking.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1>Court Booking</h1>
+        <h1>KMUTT Court Booking</h1>
         <p class="subtitle">Schedule your badminton court</p>
         <div class="nav-buttons">
           <a href="/bookings" class="nav-btn">All Bookings</a>
@@ -67,6 +67,11 @@
               name="confirmationEmail"
               placeholder="your.email@example.com"
             />
+            <small class="form-text-muted"
+              >Note: If you provide a confirmation email, Player 1's name will
+              be used as the booker. Otherwise, the admin's name and email will
+              be used.</small
+            >
           </div>
         </div>
 
@@ -88,10 +93,21 @@
           const response = await fetch("/api/courts");
           const data = await response.json();
 
+          const courtDisplayNames = {
+            1: "Court 1, 1st Period",
+            2: "Court 1, 2nd Period",
+            3: "Court 2, 1st Period",
+            4: "Court 2, 2nd Period",
+            5: "Court 3, 1st Period",
+            6: "Court 3, 2nd Period",
+            7: "Court 4, 1st Period",
+            8: "Court 4, 2nd Period",
+          };
+
           data.courts.forEach((court) => {
             const option = document.createElement("option");
             option.value = court.name;
-            option.textContent = court.name;
+            option.textContent = courtDisplayNames[court.id] || court.name;
             courtSelect.appendChild(option);
           });
         } catch (error) {
