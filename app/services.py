@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 from datetime import datetime
 import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
+from config.settingstest import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 
 logger = logging.getLogger(__name__)

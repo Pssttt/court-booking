@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config.settings import SERVER
 from app.routes import router
+from app.storage import ensure_data_dir
 
 TEMPLATES_DIR = Path(__file__).parent / "app" / "templates"
 STATIC_DIR = Path(__file__).parent / "app" / "static"
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle app startup and shutdown"""
+    ensure_data_dir()
     logger.info("Court Booking WebApp started")
     yield
     logger.info("Court Booking WebApp stopped")
