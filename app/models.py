@@ -2,17 +2,17 @@
 API Models and Data Validation
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
 class BookingRequest(BaseModel):
     """Incoming booking request from frontend"""
 
-    p1: str
-    p2: str
-    p3: str
-    court: str
+    p1: str = Field(..., min_length=1, max_length=100)
+    p2: str = Field(..., min_length=1, max_length=100)
+    p3: str = Field(..., min_length=1, max_length=100)
+    court: str = Field(..., min_length=1)
     submit_time: str = "13:00"
     confirmation_email: Optional[str] = None
 

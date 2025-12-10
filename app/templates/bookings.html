@@ -132,6 +132,17 @@
         }
       }
 
+      function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+      }
+
       async function loadBookings() {
         const loading = document.getElementById("loading");
         const bookingsList = document.getElementById("bookingsList");
@@ -160,12 +171,17 @@
                 const isPast = isBookingPast(booking);
                 const statusText = isPast ? "Completed" : "Scheduled";
                 const statusClass = isPast ? "submitted" : "";
+                
+                const p1 = escapeHtml(booking.p1);
+                const p2 = escapeHtml(booking.p2);
+                const p3 = escapeHtml(booking.p3);
+                const email = escapeHtml(booking.confirmation_email || "None");
 
                 return `
                             <div class="booking-card ${statusClass}">
                                 <div class="booking-header">
                                     <div>
-                                        <div class="booking-players">${booking.p1}, ${booking.p2}, ${booking.p3}</div>
+                                        <div class="booking-players">${p1}, ${p2}, ${p3}</div>
                                         <div class="booking-id">Booking #${booking.id}</div>
                                     </div>
                                     <span class="booking-status ${statusClass}">${statusText}</span>
@@ -185,14 +201,14 @@
                                     </div>
                                     <div class="detail-item">
                                         <div class="detail-label">Email</div>
-                                        <div class="detail-value">${booking.confirmation_email || "None"}</div>
+                                        <div class="detail-value">${email}</div>
                                     </div>
                                 </div>
                                 ${
                                   !isPast
                                     ? `
                                     <div class="booking-actions">
-                                        <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${booking.p1}')">Cancel Booking</button>
+                                        <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">Cancel Booking</button>
                                     </div>
                                 `
                                     : ""

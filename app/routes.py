@@ -5,6 +5,7 @@ All endpoints are defined here
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 import logging
+import html
 from datetime import datetime, timedelta
 
 from app.models import (
@@ -63,6 +64,12 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
     All other data (phone, email, student ID, etc.) is auto-filled.
     """
     try:
+        booking.p1 = html.escape(booking.p1)
+        booking.p2 = html.escape(booking.p2)
+        booking.p3 = html.escape(booking.p3)
+        if booking.confirmation_email:
+            booking.confirmation_email = html.escape(booking.confirmation_email)
+
         # Validate time
         hour, minute = parse_time(booking.submit_time)
         if not (0 <= hour <= 23 and 0 <= minute <= 59):

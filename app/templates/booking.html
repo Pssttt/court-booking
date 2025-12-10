@@ -22,23 +22,26 @@
       <div class="message success" id="success"></div>
       <div class="message error" id="error"></div>
 
-      <form id="bookingForm">
+      <form id="bookingForm" novalidate>
         <div class="section">
           <div class="section-title">Players</div>
 
           <div class="form-group">
             <label for="p1">Player 1</label>
             <input type="text" id="p1" name="p1" required />
+            <span class="error-message" id="p1-error"></span>
           </div>
 
           <div class="form-group">
             <label for="p2">Player 2</label>
             <input type="text" id="p2" name="p2" required />
+            <span class="error-message" id="p2-error"></span>
           </div>
 
           <div class="form-group">
             <label for="p3">Player 3</label>
             <input type="text" id="p3" name="p3" required />
+            <span class="error-message" id="p3-error"></span>
           </div>
         </div>
 
@@ -48,6 +51,7 @@
             <select id="court" name="court" required>
               <option value="">Select a court</option>
             </select>
+            <span class="error-message" id="court-error"></span>
           </div>
 
           <div class="form-group">
@@ -117,6 +121,60 @@
         }
       }
 
+      function showError(elementId, message) {
+        const inputElement = document.getElementById(elementId);
+        const errorMessageElement = document.getElementById(elementId + "-error");
+        inputElement.classList.add("is-invalid");
+        errorMessageElement.textContent = message;
+        errorMessageElement.style.display = "block";
+      }
+
+      function clearError(elementId) {
+        const inputElement = document.getElementById(elementId);
+        const errorMessageElement = document.getElementById(elementId + "-error");
+        inputElement.classList.remove("is-invalid");
+        errorMessageElement.textContent = "";
+        errorMessageElement.style.display = "none";
+      }
+
+      function validateForm(formData) {
+        let isValid = true;
+
+        // Validate Player 1
+        if (!formData.p1.trim()) {
+          showError("p1", "Player 1 name is required.");
+          isValid = false;
+        } else {
+          clearError("p1");
+        }
+
+        // Validate Player 2
+        if (!formData.p2.trim()) {
+          showError("p2", "Player 2 name is required.");
+          isValid = false;
+        } else {
+          clearError("p2");
+        }
+
+        // Validate Player 3
+        if (!formData.p3.trim()) {
+          showError("p3", "Player 3 name is required.");
+          isValid = false;
+        } else {
+          clearError("p3");
+        }
+
+        // Validate Court
+        if (!formData.court) {
+          showError("court", "Please select a court.");
+          isValid = false;
+        } else {
+          clearError("court");
+        }
+
+        return isValid;
+      }
+
       loadCourts();
 
       form.addEventListener("submit", async (e) => {
@@ -124,9 +182,7 @@
 
         successMsg.style.display = "none";
         errorMsg.style.display = "none";
-        loading.style.display = "block";
-        submitBtn.disabled = true;
-
+        
         const formData = {
           p1: document.getElementById("p1").value,
           p2: document.getElementById("p2").value,
@@ -136,6 +192,14 @@
           confirmation_email:
             document.getElementById("confirmationEmail").value || null,
         };
+
+        if (!validateForm(formData)) {
+          // If validation fails, stop here
+          return;
+        }
+
+        loading.style.display = "block";
+        submitBtn.disabled = true;
 
         try {
           const response = await fetch("/api/book", {
@@ -147,16 +211,21 @@
           const data = await response.json();
 
           if (response.ok) {
-            successMsg.innerHTML = `Booking confirmed for ${formData.p1}, ${formData.p2}, ${formData.p3} at ${formData.submit_time}`;
+            successMsg.textContent = `Booking confirmed for ${formData.p1}, ${formData.p2}, ${formData.p3} at ${formData.submit_time}`;
             successMsg.style.display = "block";
             form.reset();
+            // Clear errors after successful submission and reset
+            clearError("p1");
+            clearError("p2");
+            clearError("p3");
+            clearError("court");
             document.getElementById("submitTime").value = "13:00";
           } else {
-            errorMsg.innerHTML = `Error: ${data.detail || "Failed to schedule booking"}`;
+            errorMsg.textContent = `Error: ${data.detail || "Failed to schedule booking"}`;
             errorMsg.style.display = "block";
           }
         } catch (error) {
-          errorMsg.innerHTML = `Error: ${error.message}`;
+          errorMsg.textContent = `Error: ${error.message}`;
           errorMsg.style.display = "block";
         } finally {
           loading.style.display = "none";
