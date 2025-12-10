@@ -150,6 +150,12 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
 async def get_bookings():
     """Get all scheduled bookings"""
     bookings = get_all_bookings()
+
+    court_aliases = {c["name"]: c.get("alias", c["name"]) for c in COURTS}
+
+    for booking in bookings:
+        booking["alias"] = court_aliases.get(booking["court"], booking["court"])
+
     return {"total": len(bookings), "bookings": bookings}
 
 

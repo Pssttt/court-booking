@@ -37,7 +37,27 @@
       <div class="loading" id="loading" style="display: none">
         Loading bookings...
       </div>
-      <div class="bookings-list" id="bookingsList"></div>
+      
+      <div class="bookings-container">
+        <div class="table-wrapper">
+            <table id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Players</th>
+                        <th>Court</th>
+                        <th>Auto-Submit Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="bookingsList">
+                    <!-- Rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+      <div id="emptyStateContainer"></div>
     </div>
 
     <div class="modal" id="cancelModal">
@@ -158,16 +178,16 @@
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             const query = document.getElementById("searchInput").value.toLowerCase();
-            const cards = document.querySelectorAll(".booking-card");
+            const rows = document.querySelectorAll("#bookingsList tr");
             let visibleCount = 0;
 
-            cards.forEach(card => {
-                const text = card.textContent.toLowerCase();
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
                 if (text.includes(query)) {
-                    card.style.display = "block";
+                    row.style.display = "";
                     visibleCount++;
                 } else {
-                    card.style.display = "none";
+                    row.style.display = "none";
                 }
             });
 
@@ -184,16 +204,19 @@
       async function loadBookings() {
         const loading = document.getElementById("loading");
         const bookingsList = document.getElementById("bookingsList");
+        const emptyStateContainer = document.getElementById("emptyStateContainer");
+        const tableContainer = document.querySelector(".bookings-container");
         const infoMsg = document.getElementById("info");
 
         if (allBookings.length === 0) {
             loading.style.display = "block";
         }
-        
+
         const searchInput = document.getElementById("searchInput");
         const currentQuery = searchInput ? searchInput.value : "";
 
         bookingsList.innerHTML = "";
+        emptyStateContainer.innerHTML = "";
         infoMsg.style.display = "none";
 
         try {
@@ -202,64 +225,48 @@
           allBookings = data.bookings || [];
 
           if (allBookings.length === 0) {
-            bookingsList.innerHTML = `
-                        <div class="empty-state">
-                            <p>No bookings scheduled yet</p>
-                            <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
-                        </div>
-                    `;
+            tableContainer.style.display = "none";
+            emptyStateContainer.innerHTML = `
+                <div class="empty-state">
+                    <p>No bookings scheduled yet</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
+                </div>
+            `;
             infoMsg.style.display = "none";
           } else {
+            tableContainer.style.display = "block";
             bookingsList.innerHTML = allBookings
               .reverse()
               .map((booking) => {
                 const isPast = isBookingPast(booking);
                 const statusText = isPast ? "Completed" : "Scheduled";
-                const statusClass = isPast ? "submitted" : "";
+                const statusClass = isPast ? "submitted" : "scheduled";
                 
                 const p1 = escapeHtml(booking.p1);
                 const p2 = escapeHtml(booking.p2);
                 const p3 = escapeHtml(booking.p3);
-                const email = escapeHtml(booking.confirmation_email || "None");
 
+                const displayCourtName = booking.alias || booking.court;
+                
                 return `
-                            <div class="booking-card ${statusClass}">
-                                <div class="booking-header">
-                                    <div>
-                                        <div class="booking-players">${p1}, ${p2}, ${p3}</div>
-                                        <div class="booking-id">Booking #${booking.id}</div>
-                                    </div>
-                                    <span class="booking-status ${statusClass}">${statusText}</span>
-                                </div>
-                                <div class="booking-details">
-                                    <div class="detail-item">
-                                        <div class="detail-label">Court</div>
-                                        <div class="detail-value">${booking.court}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Submit Time</div>
-                                        <div class="detail-value">${booking.scheduled_datetime || booking.submit_time}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Created</div>
-                                        <div class="detail-value">${new Date(booking.created_at).toLocaleDateString()}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Email</div>
-                                        <div class="detail-value">${email}</div>
-                                    </div>
-                                </div>
-                                ${
-                                  !isPast
-                                    ? `
-                                    <div class="booking-actions">
-                                        <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">Cancel Booking</button>
-                                    </div>
-                                `
-                                    : ""
-                                }
-                            </div>
-                        `;
+                    <tr>
+                        <td style="color: #718096; font-size: 12px;">#${booking.id}</td>
+                        <td>
+                            <div style="font-weight: 500;">${p1}</div>
+                            <div style="font-size: 12px; color: #718096;">${p2}, ${p3}</div>
+                        </td>
+                        <td>${displayCourtName}</td>
+                        <td>${booking.scheduled_datetime || booking.submit_time}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            ${!isPast ? `
+                                <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">
+                                    Cancel
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
               })
               .join("");
 
@@ -272,8 +279,7 @@
           }
         } catch (error) {
           console.error("Error loading bookings:", error);
-          bookingsList.innerHTML =
-            '<div class="empty-state"><p>Error loading bookings</p></div>';
+          emptyStateContainer.innerHTML = '<div class="empty-state"><p>Error loading bookings</p></div>';
         } finally {
           loading.style.display = "none";
         }
