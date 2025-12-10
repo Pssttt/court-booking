@@ -142,6 +142,15 @@
       let otpRateLimitSeconds = 60;
       let otpCountdownInterval = null;
 
+      function isBookingPast(booking) {
+        if (!booking || !booking.scheduled_datetime) {
+          return false;
+        }
+        const scheduledDate = new Date(booking.scheduled_datetime);
+        const now = new Date();
+        return scheduledDate < now;
+      }
+
       function startOtpCountdown() {
         const btn = document.getElementById("requestCodeBtn");
         const msg = document.getElementById("requestCodeMsg");
