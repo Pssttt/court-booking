@@ -152,16 +152,16 @@
         msg.style.color = "#007bff";
 
         otpCountdownInterval = setInterval(() => {
-            if (timeLeft <= 0) {
-                clearInterval(otpCountdownInterval);
-                btn.disabled = false;
-                btn.style.opacity = "1";
-                btn.textContent = "Get Code";
-                msg.style.display = "none";
-                return;
-            }
-            btn.textContent = `Resend in ${timeLeft}s`;
-            timeLeft--;
+          if (timeLeft <= 0) {
+            clearInterval(otpCountdownInterval);
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.textContent = "Get Code";
+            msg.style.display = "none";
+            return;
+          }
+          btn.textContent = `Resend in ${timeLeft}s`;
+          timeLeft--;
         }, 1000);
       }
 
@@ -180,84 +180,88 @@
         msg.style.display = "none";
 
         try {
-            const response = await fetch("/api/request-cancel-code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ booking_id: cancelingBookingId }),
-            });
+          const response = await fetch("/api/request-cancel-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ booking_id: cancelingBookingId }),
+          });
 
-            const data = await response.json();
+          const data = await response.json();
 
-            msg.style.display = "block";
-            if (response.ok) {
-                msg.style.color = "#155724";
-                msg.textContent = "Code sent to Discord channel!";
-                startOtpCountdown();
-            } else {
-                msg.style.color = "#c00";
-                msg.textContent = data.detail || "Failed to send code";
-                btn.disabled = false;
-                btn.style.opacity = "1";
-                btn.textContent = "Get Code";
-            }
-        } catch (error) {
-            msg.style.display = "block";
+          msg.style.display = "block";
+          if (response.ok) {
+            msg.style.color = "#155724";
+            msg.textContent = "Code sent to Discord channel!";
+            startOtpCountdown();
+          } else {
             msg.style.color = "#c00";
-            msg.textContent = "Error: " + error.message;
+            msg.textContent = data.detail || "Failed to send code";
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.textContent = "Get Code";
+          }
+        } catch (error) {
+          msg.style.display = "block";
+          msg.style.color = "#c00";
+          msg.textContent = "Error: " + error.message;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
         }
       }
 
       function escapeHtml(text) {
         if (!text) return "";
         return text
-            .toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
       }
 
       let debounceTimer;
       function filterBookings() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const query = document.getElementById("searchInput").value.toLowerCase();
-            const rows = document.querySelectorAll("#bookingsList tr");
-            let visibleCount = 0;
+          const query = document
+            .getElementById("searchInput")
+            .value.toLowerCase();
+          const rows = document.querySelectorAll("#bookingsList tr");
+          let visibleCount = 0;
 
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                if (text.includes(query)) {
-                    row.style.display = "";
-                    visibleCount++;
-                } else {
-                    row.style.display = "none";
-                }
-            });
-
-            const infoMsg = document.getElementById("info");
-            if (query.trim() !== "") {
-                infoMsg.innerHTML = `Found ${visibleCount} booking${visibleCount !== 1 ? "s" : ""}`;
-                infoMsg.style.display = "block";
+          rows.forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
+              row.style.display = "";
+              visibleCount++;
             } else {
-                infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
+              row.style.display = "none";
             }
+          });
+
+          const infoMsg = document.getElementById("info");
+          if (query.trim() !== "") {
+            infoMsg.innerHTML = `Found ${visibleCount} booking${visibleCount !== 1 ? "s" : ""}`;
+            infoMsg.style.display = "block";
+          } else {
+            infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
+          }
         }, 300);
       }
 
       async function loadBookings() {
         const loading = document.getElementById("loading");
         const bookingsList = document.getElementById("bookingsList");
-        const emptyStateContainer = document.getElementById("emptyStateContainer");
+        const emptyStateContainer = document.getElementById(
+          "emptyStateContainer",
+        );
         const tableContainer = document.querySelector(".bookings-container");
         const infoMsg = document.getElementById("info");
 
         if (allBookings.length === 0) {
-            loading.style.display = "block";
+          loading.style.display = "block";
         }
 
         const searchInput = document.getElementById("searchInput");
@@ -268,7 +272,9 @@
         infoMsg.style.display = "none";
 
         try {
-          const response = await fetch(`/api/bookings?t=${new Date().getTime()}`);
+          const response = await fetch(
+            `/api/bookings?t=${new Date().getTime()}`,
+          );
           const data = await response.json();
           allBookings = data.bookings || [];
 
@@ -298,16 +304,16 @@
 
                 let displayTime = booking.submit_time;
                 if (booking.scheduled_datetime) {
-                    const dateObj = new Date(booking.scheduled_datetime);
-                    if (!isNaN(dateObj.getTime())) {
-                        displayTime = dateObj.toLocaleString([], {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                    }
+                  const dateObj = new Date(booking.scheduled_datetime);
+                  if (!isNaN(dateObj.getTime())) {
+                    displayTime = dateObj.toLocaleString([], {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                  }
                 }
 
                 return `
@@ -321,11 +327,15 @@
                         <td data-label="Time">${displayTime}</td>
                         <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td data-label="Action">
-                            ${!isPast ? `
+                            ${
+                              !isPast
+                                ? `
                                 <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">
                                     Cancel
                                 </button>
-                            ` : ''}
+                            `
+                                : ""
+                            }
                         </td>
                     </tr>
                 `;
@@ -336,12 +346,13 @@
             infoMsg.style.display = "block";
 
             if (currentQuery) {
-                filterBookings();
+              filterBookings();
             }
           }
         } catch (error) {
           console.error("Error loading bookings:", error);
-          emptyStateContainer.innerHTML = '<div class="empty-state"><p>Error loading bookings</p></div>';
+          emptyStateContainer.innerHTML =
+            '<div class="empty-state"><p>Error loading bookings</p></div>';
         } finally {
           loading.style.display = "none";
         }
@@ -412,12 +423,14 @@
         if (e.key === "Escape") closeCancelModal();
       });
 
-      document.getElementById("cancelPassword").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
+      document
+        .getElementById("cancelPassword")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
             e.preventDefault();
             confirmCancel();
-        }
-      });
+          }
+        });
 
       loadBookings();
       setInterval(loadBookings, 30000);
