@@ -125,6 +125,23 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
             booking.student_id,
         )
 
+        confirmation_code = generate_otp()
+        store_otp(booking_info["id"], confirmation_code)
+
+        booking_datetime = datetime.strptime(submission_date, "%Y-%m-%d %H:%M")
+
+        if not send_otp_to_discord(
+            booking_info["id"],
+            booking.p1,
+            confirmation_code,
+            otp_type="confirmation",
+            court_name=booking.court,
+            booking_time=booking_datetime,
+        ):
+            logger.warning(
+                f"Failed to send confirmation OTP for booking {booking_info['id']} to Discord."
+            )
+
         logger.info(
             f"Scheduled: {booking.p1}, {booking.p2}, {booking.p3} for {booking.court} at {submission_date}"
         )
@@ -238,7 +255,9 @@ async def request_cancel_code(request: CancelCodeRequest):
     code = generate_otp()
     store_otp(request.booking_id, code)
 
-    if send_otp_to_discord(request.booking_id, booking["p1"], code, otp_type="cancellation"):
+    if send_otp_to_discord(
+        request.booking_id, booking["p1"], code, otp_type="cancellation"
+    ):
         return {"message": "Verification code sent to Discord channel"}
     else:
         raise HTTPException(
