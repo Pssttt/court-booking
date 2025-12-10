@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 from datetime import datetime
 import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA
+from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 
 logger = logging.getLogger(__name__)
@@ -81,14 +81,20 @@ def submit_form(
         logger.info(f"Response status: {response.status_code}")
 
         if response.status_code in [200, 201, 301]:
+            display_court_time = court_time
+            for court_data in COURTS:
+                if court_data["name"] == court_time:
+                    display_court_time = court_data.get("alias", court_time)
+                    break
+
             logger.info(
-                f"Form submitted successfully: {player_names['p1']}, {player_names['p2']}, {player_names['p3']} for {court_time}"
+                f"Form submitted successfully: {player_names['p1']}, {player_names['p2']}, {player_names['p3']} for {display_court_time}"
             )
 
             if user_email:
-                send_confirmation_email(player_names, court_time, user_email)
+                send_confirmation_email(player_names, display_court_time, user_email)
             else:
-                send_confirmation_email(player_names, court_time)
+                send_confirmation_email(player_names, display_court_time)
 
             return True
         else:

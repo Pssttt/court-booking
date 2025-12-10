@@ -48,7 +48,9 @@ def get_next_submission_time(hour: int, minute: int) -> tuple[int, int, str]:
     now = datetime.now()
     target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-    if target_time < now:
+    if target_time.hour == now.hour and target_time.minute == now.minute:
+        pass
+    elif target_time < now:
         target_time += timedelta(days=1)
 
     submission_date = target_time.strftime("%Y-%m-%d %H:%M")
