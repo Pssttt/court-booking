@@ -74,13 +74,6 @@
           <p style="margin-top: 12px; font-size: 12px; color: #999">
             <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
           </p>
-        </div>
-        <div class="modal-body">
-          <p>Are you sure you want to cancel this booking?</p>
-
-          <p style="margin-top: 12px; font-size: 12px; color: #999">
-            <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
-          </p>
 
           <div style="margin-top: 8px; font-size: 12px">
             <label
@@ -136,24 +129,84 @@
       </div>
     </div>
 
+    <div class="modal" id="requestConfirmCodeModal">
+      <div class="modal-content">
+        <div class="modal-header">Request Confirmation Code</div>
+        <div class="modal-body">
+          <p>
+            You can request a confirmation code for Booking
+            <strong id="requestConfirmBookingInfo"></strong>.
+          </p>
+          <p style="margin-top: 8px; font-size: 12px">
+            This will send an OTP to Discord.
+          </p>
+
+          <div style="margin-top: 8px; font-size: 12px">
+            <div style="display: flex; gap: 8px">
+              <button
+                type="button"
+                id="requestConfirmCodeBtn"
+                onclick="requestConfirmCodeFromBookingsPage()"
+                style="
+                  padding: 0 12px;
+                  font-size: 12px;
+                  white-space: nowrap;
+                  cursor: pointer;
+                  background: #5865f2;
+                  color: white;
+                  border: none;
+                  border-radius: 2px;
+                "
+                title="Get OTP via Discord"
+              >
+                Get Code
+              </button>
+            </div>
+            <div
+              id="requestConfirmCodeMsg"
+              style="font-size: 11px; margin-top: 4px; display: none"
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="modal-btn cancel"
+            onclick="closeRequestConfirmCodeModal()"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       let allBookings = [];
       let cancelingBookingId = null;
       let otpRateLimitSeconds = 60;
       let otpCountdownInterval = null;
 
-      function startOtpCountdown() {
-        const btn = document.getElementById("requestCodeBtn");
-        const msg = document.getElementById("requestCodeMsg");
+      let requestConfirmingBookingId = null;
+      let requestConfirmingPlayerName = null;
+      let requestConfirmingCourtName = null;
+      let requestConfirmingBookingTime = null;
+      let confirmOtpCountdownInterval = null;
+
+      function startCountdown(btnElementId, msgElementId, intervalVar) {
+        const btn = document.getElementById(btnElementId);
+        const msg = document.getElementById(msgElementId);
         let timeLeft = otpRateLimitSeconds;
 
         btn.disabled = true;
         msg.style.display = "block";
         msg.style.color = "#007bff";
 
-        otpCountdownInterval = setInterval(() => {
+        if (intervalVar) {
+          clearInterval(intervalVar);
+        }
+
+        intervalVar = setInterval(() => {
           if (timeLeft <= 0) {
-            clearInterval(otpCountdownInterval);
+            clearInterval(intervalVar);
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.textContent = "Get Code";
@@ -163,6 +216,7 @@
           btn.textContent = `Resend in ${timeLeft}s`;
           timeLeft--;
         }, 1000);
+        return intervalVar;
       }
 
       async function requestCancelCode() {
@@ -192,10 +246,104 @@
           if (response.ok) {
             msg.style.color = "#155724";
             msg.textContent = "Code sent to Discord channel!";
-            startOtpCountdown();
+            otpCountdownInterval = startCountdown(
+              "requestCodeBtn",
+              "requestCodeMsg",
+              otpCountdownInterval,
+            );
           } else {
             msg.style.color = "#c00";
             msg.textContent = data.detail || "Failed to send code";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.textContent = "Get Code";
+          }
+        } catch (error) {
+          msg.style.display = "block";
+          msg.style.color = "#c00";
+          msg.textContent = "Error: " + error.message;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
+        }
+      }
+
+      let requestConfirmingBookingId = null;
+      let requestConfirmingPlayerName = null;
+      let requestConfirmingCourtName = null;
+      let requestConfirmingBookingTime = null;
+
+      function openRequestConfirmCodeModal(
+        bookingId,
+        playerName,
+        courtName,
+        bookingTime,
+      ) {
+        requestConfirmingBookingId = bookingId;
+        requestConfirmingPlayerName = playerName;
+        requestConfirmingCourtName = courtName;
+        requestConfirmingBookingTime = bookingTime;
+
+        document.getElementById("requestConfirmBookingInfo").textContent =
+          `#${bookingId} - ${playerName} (${courtName} at ${bookingTime})`;
+        document.getElementById("requestConfirmCodeMsg").style.display = "none";
+        document
+          .getElementById("requestConfirmCodeModal")
+          .classList.add("active");
+      }
+
+      function closeRequestConfirmCodeModal() {
+        document
+          .getElementById("requestConfirmCodeModal")
+          .classList.remove("active");
+        requestConfirmingBookingId = null;
+        requestConfirmingPlayerName = null;
+        requestConfirmingCourtName = null;
+        requestConfirmingBookingTime = null;
+        if (confirmOtpCountdownInterval) {
+          clearInterval(confirmOtpCountdownInterval);
+          const btn = document.getElementById("requestConfirmCodeBtn");
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
+        }
+      }
+
+      async function requestConfirmCodeFromBookingsPage() {
+        if (!requestConfirmingBookingId) return;
+
+        const btn = document.getElementById("requestConfirmCodeBtn");
+        const msg = document.getElementById("requestConfirmCodeMsg");
+
+        if (btn.disabled && confirmOtpCountdownInterval) return;
+
+        clearInterval(confirmOtpCountdownInterval);
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+        btn.textContent = "Sending...";
+        msg.style.display = "none";
+
+        try {
+          const response = await fetch("/api/request-confirm-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ booking_id: requestConfirmingBookingId }),
+          });
+
+          const data = await response.json();
+
+          msg.style.display = "block";
+          if (response.ok) {
+            msg.style.color = "#155724";
+            msg.textContent = "Confirmation code sent to Discord channel!";
+            confirmOtpCountdownInterval = startCountdown(
+              "requestConfirmCodeBtn",
+              "requestConfirmCodeMsg",
+              confirmOtpCountdownInterval,
+            );
+          } else {
+            msg.style.color = "#c00";
+            msg.textContent = data.detail || "Failed to send confirmation code";
             btn.disabled = false;
             btn.style.opacity = "1";
             btn.textContent = "Get Code";
@@ -350,6 +498,15 @@
                         <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td data-label="Action">
                             ${
+                              booking.status === "pending"
+                                ? `
+                                <button class="action-btn request-confirm-btn" onclick="openRequestConfirmCodeModal(${booking.id}, '${p1.replace(/'/g, "\\'")}', '${displayCourtName.replace(/'/g, "\\'")}', '${displayTime}')">
+                                    Request Confirm Code
+                                </button>
+                                `
+                                : ""
+                            }
+                            ${
                               booking.status !== "cancelled" &&
                               booking.status !== "submitted"
                                 ? `
@@ -443,7 +600,10 @@
       }
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeCancelModal();
+        if (e.key === "Escape") {
+          closeCancelModal();
+          closeRequestConfirmCodeModal();
+        }
       });
 
       document

@@ -15,12 +15,12 @@ from app.models import (
     CancelBookingRequest,
     CancelCodeRequest,
     BookingConfirmRequest,
+    ConfirmCodeRequest,
 )
 from app.services import wait_until_and_submit, FormSubmissionError, cancel_task
 from app.storage import (
     add_booking,
     get_all_bookings,
-    delete_booking,
     get_booking,
     update_booking_status,
 )
@@ -313,4 +313,56 @@ async def request_cancel_code(request: CancelCodeRequest):
         raise HTTPException(
             status_code=500,
             detail="Failed to send verification code. Check server logs.",
+        )
+
+
+@router.post("/request-confirm-code")
+async def request_confirm_code(request: ConfirmCodeRequest):
+    """
+    Request a dynamic confirmation code (OTP) via Discord for a pending booking.
+    """
+    try:
+        check_otp_request_rate_limit(request.booking_id)
+    except RateLimitExceededError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+
+    booking = get_booking(request.booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+
+    if booking["status"] != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Booking is not pending confirmation (current status: {booking['status']}).",
+        )
+
+    code = generate_otp()
+    store_otp(request.booking_id, code)
+
+    booking_datetime_str = booking.get("scheduled_datetime")
+    court_name = booking.get("court")
+
+    if not booking_datetime_str or not court_name:
+        logger.error(
+            f"Missing scheduled_datetime or court for booking {request.booking_id}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Booking details incomplete for OTP."
+        )
+
+    booking_datetime = datetime.fromisoformat(booking_datetime_str)
+
+    if send_otp_to_discord(
+        request.booking_id,
+        booking["p1"],
+        code,
+        otp_type="confirmation",
+        court_name=court_name,
+        booking_time=booking_datetime,
+    ):
+        return {"message": "Confirmation code sent to Discord channel."}
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send confirmation code. Check server logs.",
         )

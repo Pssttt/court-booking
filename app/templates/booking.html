@@ -115,6 +115,56 @@
       </form>
     </div>
 
+    <div class="modal" id="confirmBookingModal">
+      <div class="modal-content">
+        <div class="modal-header">Confirm Booking</div>
+        <div class="modal-body">
+          <p>Your booking has been scheduled but requires confirmation.</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong> <span id="confirmBookingInfo"></span>
+          </p>
+          <p style="margin-top: 8px; font-size: 12px">
+            Please enter the One-Time Password (OTP) sent to Discord to confirm
+            your booking.
+          </p>
+          <div style="margin-top: 8px; font-size: 12px">
+            <label
+              for="confirmationOtp"
+              style="display: block; margin-bottom: 6px"
+              >Confirmation OTP:</label
+            >
+            <input
+              type="text"
+              id="confirmationOtp"
+              class="password-input"
+              placeholder="Enter OTP"
+              style="margin-bottom: 0"
+            />
+            <div
+              id="confirmOtpErrorMsg"
+              style="
+                font-size: 11px;
+                margin-top: 4px;
+                display: none;
+                color: #c00;
+              "
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel" onclick="closeConfirmBookingModal()">
+            Later
+          </button>
+          <button
+            class="modal-btn confirm"
+            onclick="confirmBookingOtp()"
+            id="confirmBookingOtpBtn"
+          >
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    </div>
     <script>
       const form = document.getElementById("bookingForm");
       const successMsg = document.getElementById("success");
@@ -125,6 +175,9 @@
       const confirmationEmailInput =
         document.getElementById("confirmationEmail");
       const extraFieldsDiv = document.getElementById("extraFields");
+
+      let currentBookingIdToConfirm = null;
+      let currentP1NameToConfirm = null;
 
       confirmationEmailInput.addEventListener("input", function () {
         if (this.value.trim() !== "") {
@@ -260,6 +313,73 @@
       loadCourts();
       loadSavedPlayers();
 
+      function openConfirmBookingModal(bookingId, playerName) {
+        currentBookingIdToConfirm = bookingId;
+        currentP1NameToConfirm = playerName;
+        document.getElementById("confirmBookingInfo").textContent =
+          `#${bookingId} - ${playerName}`;
+        document.getElementById("confirmationOtp").value = "";
+        document.getElementById("confirmOtpErrorMsg").style.display = "none";
+        document.getElementById("confirmBookingModal").classList.add("active");
+        document.getElementById("confirmationOtp").focus();
+      }
+
+      function closeConfirmBookingModal() {
+        document
+          .getElementById("confirmBookingModal")
+          .classList.remove("active");
+        currentBookingIdToConfirm = null;
+        currentP1NameToConfirm = null;
+      }
+
+      async function confirmBookingOtp() {
+        if (!currentBookingIdToConfirm) return;
+
+        const otp = document.getElementById("confirmationOtp").value;
+        if (!otp) {
+          document.getElementById("confirmOtpErrorMsg").textContent =
+            "Please enter the OTP.";
+          document.getElementById("confirmOtpErrorMsg").style.display = "block";
+          return;
+        }
+
+        const confirmBtn = document.getElementById("confirmBookingOtpBtn");
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirming...";
+        document.getElementById("confirmOtpErrorMsg").style.display = "none";
+
+        try {
+          const response = await fetch("/api/confirm-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking_id: currentBookingIdToConfirm,
+              confirmation_code: otp,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            successMsg.textContent = `Booking #${currentBookingIdToConfirm} confirmed successfully!`;
+            successMsg.style.display = "block";
+            closeConfirmBookingModal();
+          } else {
+            document.getElementById("confirmOtpErrorMsg").textContent =
+              data.detail || "Failed to confirm booking.";
+            document.getElementById("confirmOtpErrorMsg").style.display =
+              "block";
+          }
+        } catch (error) {
+          document.getElementById("confirmOtpErrorMsg").textContent =
+            `Error: ${error.message}`;
+          document.getElementById("confirmOtpErrorMsg").style.display = "block";
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Confirm Booking";
+        }
+      }
+
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -283,8 +403,6 @@
           return;
         }
 
-        // Convert empty strings back to null for API if preferred,
-        // though backend handles empty strings fine as "falsy"
         const apiData = {
           ...formData,
           confirmation_email: formData.confirmation_email || null,
@@ -317,10 +435,9 @@
               }),
             );
 
-            successMsg.textContent = `Booking confirmed for ${formData.p1}, ${formData.p2}, ${formData.p3} at ${formData.submit_time}`;
-            successMsg.style.display = "block";
+            openConfirmBookingModal(data.booking.id, formData.p1);
+
             form.reset();
-            // Clear errors after successful submission and reset
             clearError("p1");
             clearError("p2");
             clearError("p3");
@@ -329,7 +446,6 @@
             clearError("student_id");
             extraFieldsDiv.style.display = "none";
             document.getElementById("submitTime").value = "13:00";
-
             loadSavedPlayers();
           } else {
             errorMsg.textContent = `Error: ${data.detail || "Failed to schedule booking"}`;
@@ -343,6 +459,21 @@
           submitBtn.disabled = false;
         }
       });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeConfirmBookingModal();
+        }
+      });
+
+      document
+        .getElementById("confirmationOtp")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBookingOtp();
+          }
+        });
     </script>
   </body>
 </html>

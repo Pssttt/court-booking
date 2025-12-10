@@ -57,6 +57,12 @@ class CancelCodeRequest(BaseModel):
     booking_id: int
 
 
+class ConfirmCodeRequest(BaseModel):
+    """Request to generate a confirmation code for a pending booking"""
+
+    booking_id: int
+
+
 class BookingConfirmRequest(BaseModel):
     """Request to confirm a booking with an OTP"""
 
