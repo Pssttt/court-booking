@@ -142,15 +142,6 @@
       let otpRateLimitSeconds = 60;
       let otpCountdownInterval = null;
 
-      function isBookingPast(booking) {
-        if (!booking || !booking.scheduled_datetime) {
-          return false;
-        }
-        const scheduledDate = new Date(booking.scheduled_datetime);
-        const now = new Date();
-        return scheduledDate < now;
-      }
-
       function startOtpCountdown() {
         const btn = document.getElementById("requestCodeBtn");
         const msg = document.getElementById("requestCodeMsg");
@@ -301,9 +292,31 @@
             bookingsList.innerHTML = allBookings
               .reverse()
               .map((booking) => {
-                const isPast = isBookingPast(booking);
-                const statusText = isPast ? "Completed" : "Scheduled";
-                const statusClass = isPast ? "submitted" : "scheduled";
+                let statusText = booking.status;
+                let statusClass = booking.status;
+
+                switch (booking.status) {
+                  case "pending":
+                    statusText = "Pending";
+                    statusClass = "pending";
+                    break;
+                  case "confirmed":
+                    statusText = "Confirmed";
+                    statusClass = "confirmed";
+                    break;
+                  case "cancelled":
+                    statusText = "Cancelled";
+                    statusClass = "cancelled";
+                    break;
+                  case "submitted":
+                    statusText = "Completed";
+                    statusClass = "submitted";
+                    break;
+                  default:
+                    statusText = booking.status;
+                    statusClass = "scheduled";
+                    break;
+                }
 
                 const p1 = escapeHtml(booking.p1);
                 const p2 = escapeHtml(booking.p2);
@@ -337,7 +350,8 @@
                         <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
                         <td data-label="Action">
                             ${
-                              !isPast
+                              booking.status !== "cancelled" &&
+                              booking.status !== "submitted"
                                 ? `
                                 <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\\'")}')">
                                     Cancel

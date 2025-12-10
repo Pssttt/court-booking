@@ -54,6 +54,21 @@ tr:hover {
   line-height: 1;
 }
 
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.confirmed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
 .status-badge.scheduled {
   background: #fff3cd;
   color: #856404;

@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_data_dir()
     """Handle app startup and shutdown"""
     logger.info("Court Booking WebApp started")
     yield

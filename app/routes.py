@@ -261,9 +261,6 @@ async def cancel_booking(request: CancelBookingRequest):
 
     cancel_task(request.booking_id)
 
-    if not delete_booking(request.booking_id):
-        logger.error(f"Failed to delete booking {request.booking_id} from database")
-
     if not update_booking_status(request.booking_id, "cancelled"):
         logger.error(
             f"Failed to update booking {request.booking_id} status to cancelled in database"
@@ -272,14 +269,21 @@ async def cancel_booking(request: CancelBookingRequest):
             status_code=500, detail="Failed to update booking status to cancelled."
         )
 
+    updated_booking = get_booking(request.booking_id)
+    if not updated_booking:
+        logger.error(f"Booking {request.booking_id} not found after status update.")
+        raise HTTPException(
+            status_code=500, detail="Booking not found after status update."
+        )
+
     logger.info(
-        f"Cancelled booking {request.booking_id}: {booking['p1']}, {booking['p2']}, {booking['p3']}"
+        f"Cancelled booking {request.booking_id}: {updated_booking['p1']}, {updated_booking['p2']}, {updated_booking['p3']}"
     )
 
     return {
         "status": "cancelled",
         "message": f"Booking {request.booking_id} has been cancelled",
-        "booking": booking,
+        "booking": updated_booking,
         "total_scheduled": len(get_all_bookings()),
     }
 

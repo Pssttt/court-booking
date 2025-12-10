@@ -177,4 +177,3 @@ def send_otp_to_discord(
     except Exception as e:
         logger.error(f"Error sending Discord webhook: {str(e)}")
         return False
-
