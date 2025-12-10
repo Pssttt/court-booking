@@ -70,7 +70,7 @@ def get_next_submission_time(hour: int, minute: int) -> tuple[int, int, str]:
 
 
 @router.post("/book", response_model=BookingResponse)
-async def create_booking(booking: BookingRequest, background_tasks: BackgroundTasks):
+async def create_booking(booking: BookingRequest):
     """
     Schedule a court booking
 
@@ -114,12 +114,6 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
                     "Duplicate booking detected for these players and court."
                 )
 
-        player_names = {
-            "p1": booking.p1,
-            "p2": booking.p2,
-            "p3": booking.p3,
-        }
-
         # Save to JSON file
         booking_info = add_booking(
             booking.p1,
@@ -152,19 +146,6 @@ async def create_booking(booking: BookingRequest, background_tasks: BackgroundTa
 
         logger.info(
             f"Scheduled: {booking.p1}, {booking.p2}, {booking.p3} for {booking.court} at {submission_date}"
-        )
-
-        # Schedule submission in background
-        background_tasks.add_task(
-            wait_until_and_submit,
-            booking_info["id"],
-            player_names,
-            booking.court,
-            target_hour,
-            target_minute,
-            booking.confirmation_email,
-            booking.phone,
-            booking.student_id,
         )
 
         return BookingResponse(
@@ -202,7 +183,9 @@ async def get_courts():
 
 
 @router.post("/confirm-booking")
-async def confirm_booking(request: BookingConfirmRequest):
+async def confirm_booking(
+    request: BookingConfirmRequest, background_tasks: BackgroundTasks
+):
     """
     Confirm a pending booking using an OTP.
     """
@@ -224,12 +207,52 @@ async def confirm_booking(request: BookingConfirmRequest):
     if not update_booking_status(request.booking_id, "confirmed"):
         raise HTTPException(status_code=500, detail="Failed to update booking status.")
 
-    logger.info(f"Booking {request.booking_id} confirmed successfully.")
+    confirmed_booking = get_booking(request.booking_id)
+    if not confirmed_booking:
+        logger.error(
+            f"Confirmed booking {request.booking_id} not found after status update."
+        )
+        raise HTTPException(status_code=500, detail="Confirmed booking not found.")
+
+    submit_time_str = confirmed_booking.get("submit_time")
+    scheduled_datetime_str = confirmed_booking.get("scheduled_datetime")
+
+    if not submit_time_str or not scheduled_datetime_str:
+        logger.error(
+            f"Missing submit_time or scheduled_datetime for confirmed booking {request.booking_id}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Booking details incomplete for submission."
+        )
+
+    submit_hour, submit_minute = map(int, submit_time_str.split(":"))
+
+    player_names = {
+        "p1": confirmed_booking.get("p1"),
+        "p2": confirmed_booking.get("p2"),
+        "p3": confirmed_booking.get("p3"),
+    }
+
+    background_tasks.add_task(
+        wait_until_and_submit,
+        confirmed_booking["id"],
+        player_names,
+        confirmed_booking["court"],
+        submit_hour,
+        submit_minute,
+        confirmed_booking.get("confirmation_email"),
+        confirmed_booking.get("phone"),
+        confirmed_booking.get("student_id"),
+    )
+
+    logger.info(
+        f"Booking {request.booking_id} confirmed and scheduled for submission successfully."
+    )
 
     return {
         "status": "confirmed",
-        "message": f"Booking {request.booking_id} has been confirmed.",
-        "booking": get_booking(request.booking_id),
+        "message": f"Booking {request.booking_id} has been confirmed and submission scheduled.",
+        "booking": confirmed_booking,
         "total_scheduled": len(get_all_bookings()),
     }
 
