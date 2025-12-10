@@ -103,7 +103,7 @@ EMAIL_CONFIG = {
 
 SERVER = {
     "host": os.getenv("SERVER_HOST", "0.0.0.0"),
-    "port": int(os.getenv("SERVER_PORT", "8000")),
+    "port": int(os.getenv("SERVER_PORT", "3000")),
     "debug": os.getenv("SERVER_DEBUG", "false").lower() == "true",
 }
 
