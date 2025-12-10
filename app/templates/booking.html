@@ -55,7 +55,7 @@
           </div>
 
           <div class="form-group">
-            <label for="submitTime">Time</label>
+            <label for="submitTime">Auto-Submit Time</label>
             <input
               type="time"
               id="submitTime"
@@ -63,6 +63,10 @@
               value="13:00"
               required
             />
+            <small class="form-text-muted"
+              >The time when the system will automatically submit your booking
+              request.</small
+            >
           </div>
 
           <div class="form-group">
@@ -123,7 +127,9 @@
 
       function showError(elementId, message) {
         const inputElement = document.getElementById(elementId);
-        const errorMessageElement = document.getElementById(elementId + "-error");
+        const errorMessageElement = document.getElementById(
+          elementId + "-error",
+        );
         inputElement.classList.add("is-invalid");
         errorMessageElement.textContent = message;
         errorMessageElement.style.display = "block";
@@ -131,7 +137,9 @@
 
       function clearError(elementId) {
         const inputElement = document.getElementById(elementId);
-        const errorMessageElement = document.getElementById(elementId + "-error");
+        const errorMessageElement = document.getElementById(
+          elementId + "-error",
+        );
         inputElement.classList.remove("is-invalid");
         errorMessageElement.textContent = "";
         errorMessageElement.style.display = "none";
@@ -182,7 +190,7 @@
 
         successMsg.style.display = "none";
         errorMsg.style.display = "none";
-        
+
         const formData = {
           p1: document.getElementById("p1").value,
           p2: document.getElementById("p2").value,

@@ -24,6 +24,16 @@
       <div class="message success" id="success"></div>
       <div class="message error" id="error"></div>
 
+      <div class="search-bar" style="margin-bottom: 20px;">
+        <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search bookings by player name or ID..."
+            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+            onkeyup="filterBookings()"
+        >
+      </div>
+
       <div class="loading" id="loading" style="display: none">
         Loading bookings...
       </div>
@@ -143,12 +153,46 @@
             .replace(/'/g, "&#039;");
       }
 
+      let debounceTimer;
+      function filterBookings() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const query = document.getElementById("searchInput").value.toLowerCase();
+            const cards = document.querySelectorAll(".booking-card");
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    card.style.display = "block";
+                    visibleCount++;
+                } else {
+                    card.style.display = "none";
+                }
+            });
+
+            const infoMsg = document.getElementById("info");
+            if (query.trim() !== "") {
+                infoMsg.innerHTML = `Found ${visibleCount} booking${visibleCount !== 1 ? "s" : ""}`;
+                infoMsg.style.display = "block";
+            } else {
+                infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
+            }
+        }, 300);
+      }
+
       async function loadBookings() {
         const loading = document.getElementById("loading");
         const bookingsList = document.getElementById("bookingsList");
         const infoMsg = document.getElementById("info");
 
-        loading.style.display = "block";
+        if (allBookings.length === 0) {
+            loading.style.display = "block";
+        }
+        
+        const searchInput = document.getElementById("searchInput");
+        const currentQuery = searchInput ? searchInput.value : "";
+
         bookingsList.innerHTML = "";
         infoMsg.style.display = "none";
 
@@ -164,6 +208,7 @@
                             <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
                         </div>
                     `;
+            infoMsg.style.display = "none";
           } else {
             bookingsList.innerHTML = allBookings
               .reverse()
@@ -220,6 +265,10 @@
 
             infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
             infoMsg.style.display = "block";
+            
+            if (currentQuery) {
+                filterBookings();
+            }
           }
         } catch (error) {
           console.error("Error loading bookings:", error);
