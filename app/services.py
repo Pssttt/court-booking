@@ -2,13 +2,13 @@
 Google Form Submission Service
 """
 
-import requests
+import httpx
 import logging
+import asyncio
 from typing import Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
+from config.settingstest import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 from app.storage import update_booking_status
 
@@ -30,7 +30,7 @@ class TaskCancelled(Exception):
     pass
 
 
-def submit_form(
+async def submit_form(
     player_names: dict,
     court_time: str,
     user_email: Optional[str] = None,
@@ -84,12 +84,13 @@ def submit_form(
             "pageHistory": "0,1,3,4",
         }
 
-        response = requests.post(
-            submit_url,
-            data=payload,
-            timeout=10,
-            allow_redirects=True,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                submit_url,
+                data=payload,
+                timeout=10,
+                follow_redirects=True,
+            )
 
         logger.info(f"Response status: {response.status_code}")
 
@@ -105,9 +106,16 @@ def submit_form(
             )
 
             if user_email:
-                send_confirmation_email(player_names, display_court_time, user_email)
+                await asyncio.to_thread(
+                    send_confirmation_email,
+                    player_names,
+                    display_court_time,
+                    user_email,
+                )
             else:
-                send_confirmation_email(player_names, display_court_time)
+                await asyncio.to_thread(
+                    send_confirmation_email, player_names, display_court_time
+                )
 
             return True
         else:
@@ -115,7 +123,7 @@ def submit_form(
             logger.error(f"Response: {response.text[:200]}")
             return False
 
-    except requests.RequestException as e:
+    except httpx.RequestError as e:
         logger.error(f"Network error: {str(e)}")
         raise FormSubmissionError(f"Failed to submit form: {str(e)}")
     except Exception as e:
@@ -123,7 +131,7 @@ def submit_form(
         raise FormSubmissionError(f"Error submitting form: {str(e)}")
 
 
-def wait_until_and_submit(
+async def wait_until_and_submit(
     booking_id: int,
     player_names: dict,
     court_time: str,
@@ -166,7 +174,7 @@ def wait_until_and_submit(
             now = datetime.now(TZ_BANGKOK)
             if now.hour == target_hour and now.minute == target_minute:
                 logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
-                result = submit_form(
+                result = await submit_form(
                     player_names, court_time, user_email, phone, student_id
                 )
                 active_tasks.pop(booking_id, None)
@@ -176,7 +184,7 @@ def wait_until_and_submit(
 
                 return result
 
-            time.sleep(1)
+            await asyncio.sleep(1)
     except TaskCancelled:
         return False
 

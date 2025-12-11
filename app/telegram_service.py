@@ -3,7 +3,7 @@ Telegram Service
 Handles interaction with Telegram Bot API for notifications and OTPs
 """
 
-import requests
+import httpx
 import logging
 from datetime import datetime
 from typing import Optional
@@ -13,7 +13,7 @@ from app.otp_manager import OTP_VALIDITY_SECONDS
 logger = logging.getLogger(__name__)
 
 
-def send_otp_to_telegram(
+async def send_otp_to_telegram(
     booking_id: int,
     player_name: str,
     code: str,
@@ -39,9 +39,6 @@ def send_otp_to_telegram(
     chat_id = TELEGRAM_CONFIG["chat_id"]
 
     if not bot_token or not chat_id:
-        # Only log warning if we expect to use Telegram (e.g. implicitly if not configured)
-        # But if the user didn't set it up, maybe we shouldn't spam logs.
-        # However, for now, let's log it so they know why it failed if they tried.
         logger.debug("Telegram credentials not configured")
         return False
 
@@ -55,21 +52,21 @@ def send_otp_to_telegram(
         message = f"✅ *Confirmation Code Requested*\n\n"
         message += f"Booking ID: *#{booking_id}*\n"
         message += f"Booked By: {player_name}\n"
-
+        
         if court_name and booking_time:
             display_court_name = court_name
             for court_data in COURTS:
                 if court_data["name"] == court_name:
                     display_court_name = court_data.get("alias", court_name)
                     break
-
+            
             date_str = booking_time.strftime("%d %b %Y")
             time_str = booking_time.strftime("%H:%M")
-
+            
             message += f"Date: {date_str}\n"
             message += f"Time: {time_str}\n"
             message += f"Court: {display_court_name}\n"
-
+            
         message += f"Code: `{code}`\n"
     else:
         logger.error(f"Invalid OTP type: {otp_type}")
@@ -85,19 +82,16 @@ def send_otp_to_telegram(
     }
 
     try:
-        response = requests.post(url, json=payload, timeout=5)
-
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, timeout=5)
+        
         if response.status_code == 200:
-            logger.info(
-                f"{otp_type.capitalize()} OTP sent to Telegram for booking {booking_id}"
-            )
+            logger.info(f"{otp_type.capitalize()} OTP sent to Telegram for booking {booking_id}")
             return True
         else:
-            logger.error(
-                f"Failed to send Telegram message: {response.status_code} {response.text}"
-            )
+            logger.error(f"Failed to send Telegram message: {response.status_code} {response.text}")
             return False
-
+            
     except Exception as e:
         logger.error(f"Error sending Telegram message: {str(e)}")
         return False

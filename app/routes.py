@@ -133,7 +133,7 @@ async def create_booking(booking: BookingRequest):
 
         booking_datetime = datetime.strptime(submission_date, "%Y-%m-%d %H:%M")
 
-        discord_success = send_otp_to_discord(
+        discord_success = await send_otp_to_discord(
             booking_info["id"],
             booking.p1,
             confirmation_code,
@@ -142,7 +142,7 @@ async def create_booking(booking: BookingRequest):
             booking_time=booking_datetime,
         )
 
-        telegram_success = send_otp_to_telegram(
+        telegram_success = await send_otp_to_telegram(
             booking_info["id"],
             booking.p1,
             confirmation_code,
@@ -346,11 +346,11 @@ async def request_cancel_code(request: CancelCodeRequest):
     code = generate_otp()
     store_otp(request.booking_id, code)
 
-    discord_success = send_otp_to_discord(
+    discord_success = await send_otp_to_discord(
         request.booking_id, booking["p1"], code, otp_type="cancellation"
     )
 
-    telegram_success = send_otp_to_telegram(
+    telegram_success = await send_otp_to_telegram(
         request.booking_id, booking["p1"], code, otp_type="cancellation"
     )
 
@@ -399,7 +399,7 @@ async def request_confirm_code(request: ConfirmCodeRequest):
 
     booking_datetime = datetime.fromisoformat(booking_datetime_str)
 
-    discord_success = send_otp_to_discord(
+    discord_success = await send_otp_to_discord(
         request.booking_id,
         booking["p1"],
         code,
@@ -408,7 +408,7 @@ async def request_confirm_code(request: ConfirmCodeRequest):
         booking_time=booking_datetime,
     )
 
-    telegram_success = send_otp_to_telegram(
+    telegram_success = await send_otp_to_telegram(
         request.booking_id,
         booking["p1"],
         code,

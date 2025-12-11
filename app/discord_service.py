@@ -3,7 +3,7 @@ Discord Service
 Handles interaction with Discord Webhooks for notifications and OTPs
 """
 
-import requests
+import httpx
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,7 +13,7 @@ from app.otp_manager import OTP_VALIDITY_SECONDS
 logger = logging.getLogger(__name__)
 
 
-def send_otp_to_discord(
+async def send_otp_to_discord(
     booking_id: int,
     player_name: str,
     code: str,
@@ -107,7 +107,8 @@ def send_otp_to_discord(
             ],
         }
 
-        response = requests.post(webhook_url, json=payload, timeout=5)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(webhook_url, json=payload, timeout=5)
 
         if response.status_code in [200, 204]:
             logger.info(
