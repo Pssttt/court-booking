@@ -8,13 +8,43 @@ import logging
 import random
 import string
 import time
-from datetime import datetime
-from config.settings import DISCORD_CONFIG
+from datetime import datetime, timezone
+from typing import Optional
+from config.settings import COURTS, DISCORD_CONFIG
 
 logger = logging.getLogger(__name__)
 
 _otp_store = {}
+_otp_request_timestamps = {}
 OTP_VALIDITY_SECONDS = 300  # 5 minutes
+
+OTP_REQUEST_RATE_LIMIT_SECONDS = 60
+
+
+class RateLimitExceededError(Exception):
+    """Custom exception for when a rate limit is exceeded"""
+
+    pass
+
+
+def check_otp_request_rate_limit(booking_id: int) -> None:
+    """
+    Checks and enforces a rate limit for OTP requests per booking ID.
+    Raises RateLimitExceededError if the limit is exceeded.
+    """
+
+    now = time.time()
+    last_request_time = _otp_request_timestamps.get(booking_id)
+
+    if (
+        last_request_time is not None
+        and (now - last_request_time) < OTP_REQUEST_RATE_LIMIT_SECONDS
+    ):
+        raise RateLimitExceededError(
+            f"Rate limit exceeded for booking {booking_id}. Please wait before requesting another OTP."
+        )
+
+    _otp_request_timestamps[booking_id] = now
 
 
 def generate_otp() -> str:
@@ -47,14 +77,25 @@ def verify_otp(booking_id: int, code: str) -> bool:
     return False
 
 
-def send_otp_to_discord(booking_id: int, player_name: str, code: str) -> bool:
+def send_otp_to_discord(
+    booking_id: int,
+    player_name: str,
+    code: str,
+    otp_type: str = "cancellation",  # "cancellation" or "confirmation"
+    court_name: Optional[str] = None,
+    booking_time: Optional[datetime] = None,
+) -> bool:
     """
-    Send the generated OTP to Discord via Webhook
+    Send the generated OTP to Discord via Webhook. This function can be used for both
+    cancellation and booking confirmation OTPs.
 
     Args:
         booking_id: The ID of the booking
         player_name: Name of the primary player
         code: The generated OTP code
+        otp_type: Type of OTP, either "cancellation" or "confirmation".
+        court_name: Optional, name of the court for confirmation OTPs.
+        booking_time: Optional, time of the booking for confirmation OTPs.
 
     Returns:
         True if successful, False otherwise
@@ -64,35 +105,68 @@ def send_otp_to_discord(booking_id: int, player_name: str, code: str) -> bool:
         logger.warning("Discord Webhook URL not configured")
         return False
 
+    title = ""
+    color = 0
+
+    if otp_type == "cancellation":
+        title = f"🔐 Cancellation Code Requested for Booking **#{booking_id}**"
+        color = 0xE67E22
+    elif otp_type == "confirmation":
+        title = f"✅ Confirmation Code Requested for Booking **#{booking_id}**"
+        color = 0x3498DB
+    else:
+        logger.error(f"Invalid OTP type: {otp_type}")
+        return False
+
     try:
+        fields = [
+            {"name": "Booked By", "value": player_name, "inline": True},
+            {
+                "name": "VERIFICATION CODE",
+                "value": f"**```\n{code}\n```**",
+                "inline": False,
+            },
+        ]
+
+        if otp_type == "confirmation" and court_name and booking_time:
+            display_court_name = court_name
+
+            for court_data in COURTS:
+                if court_data["name"] == court_name:
+                    display_court_name = court_data.get("alias", court_name)
+                    break
+
+            date_str = booking_time.strftime("%d %b %Y")
+            time_str = booking_time.strftime("%H:%M")
+
+            fields.insert(
+                2,
+                {"name": "DATE", "value": date_str, "inline": True},
+            )
+
+            fields.insert(
+                3,
+                {"name": "TIME", "value": time_str, "inline": True},
+            )
+
+            fields.insert(
+                4, {"name": "COURT", "value": display_court_name, "inline": False}
+            )
+
         payload = {
             "content": None,
             "embeds": [
                 {
-                    "title": "🔐 Cancellation Code Requested",
-                    "description": f"A cancellation code was requested for Booking **#{booking_id}**.",
-                    "color": 16711680,
-                    "fields": [
-                        {
-                            "name": "Booking ID",
-                            "value": str(booking_id),
-                            "inline": True,
-                        },
-                        {"name": "Booked By", "value": player_name, "inline": True},
-                        {
-                            "name": "One-Time Password",
-                            "value": f"**`{code}`**",
-                            "inline": False,
-                        },
-                        {
-                            "name": "Expires In",
-                            "value": f"{OTP_VALIDITY_SECONDS // 60} minutes",
-                            "inline": True,
-                        },
-                    ],
-                    "footer": {
-                        "text": f"Requested at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    "title": title,
+                    "color": color,
+                    "fields": fields,
+                    "image": {
+                        "url": "https://img.freepik.com/premium-photo/badminton-sports-background-vector-international-sports-day-illustration-graphic-design-decoration-gift-certificates-banners-flyers_880763-31028.jpg"
                     },
+                    "footer": {
+                        "text": f"Expires in {OTP_VALIDITY_SECONDS // 60} minutes"
+                    },
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             ],
         }
@@ -100,7 +174,9 @@ def send_otp_to_discord(booking_id: int, player_name: str, code: str) -> bool:
         response = requests.post(webhook_url, json=payload, timeout=5)
 
         if response.status_code in [200, 204]:
-            logger.info(f"OTP sent to Discord for booking {booking_id}")
+            logger.info(
+                f"{otp_type.capitalize()} OTP sent to Discord for booking {booking_id}"
+            )
             return True
         else:
             logger.error(f"Failed to send Discord webhook: {response.status_code}")

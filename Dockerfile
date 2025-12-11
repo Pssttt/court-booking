@@ -9,7 +9,6 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 FROM python:3.11-slim
 
 WORKDIR /app
-RUN mkdir -p /app/data
 
 COPY --from=builder /root/.local /root/.local
 COPY . .

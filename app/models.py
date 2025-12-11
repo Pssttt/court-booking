@@ -2,19 +2,30 @@
 API Models and Data Validation
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional
 
 
 class BookingRequest(BaseModel):
     """Incoming booking request from frontend"""
 
-    p1: str
-    p2: str
-    p3: str
-    court: str
+    p1: str = Field(..., min_length=1, max_length=100)
+    p2: str = Field(..., min_length=1, max_length=100)
+    p3: str = Field(..., min_length=1, max_length=100)
+    court: str = Field(..., min_length=1)
     submit_time: str = "13:00"
     confirmation_email: Optional[str] = None
+    phone: Optional[str] = None
+    student_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def check_contact_info(self) -> "BookingRequest":
+        if self.confirmation_email:
+            if not self.phone:
+                raise ValueError("Phone number is required when email is provided")
+            if not self.student_id:
+                raise ValueError("Student ID is required when email is provided")
+        return self
 
 
 class BookingResponse(BaseModel):
@@ -44,3 +55,16 @@ class CancelCodeRequest(BaseModel):
     """Request to generate a cancellation code"""
 
     booking_id: int
+
+
+class ConfirmCodeRequest(BaseModel):
+    """Request to generate a confirmation code for a pending booking"""
+
+    booking_id: int
+
+
+class BookingConfirmRequest(BaseModel):
+    """Request to confirm a booking with an OTP"""
+
+    booking_id: int
+    confirmation_code: str

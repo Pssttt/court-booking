@@ -6,13 +6,16 @@ import requests
 import logging
 from typing import Optional
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import time
-from config.settings import GOOGLE_FORM, BOOKING_DATA
+from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
+from app.storage import update_booking_status
 
 logger = logging.getLogger(__name__)
 
 active_tasks = {}
+TZ_BANGKOK = ZoneInfo("Asia/Bangkok")
 
 
 class FormSubmissionError(Exception):
@@ -28,7 +31,11 @@ class TaskCancelled(Exception):
 
 
 def submit_form(
-    player_names: dict, court_time: str, user_email: Optional[str] = None
+    player_names: dict,
+    court_time: str,
+    user_email: Optional[str] = None,
+    phone: Optional[str] = None,
+    student_id: Optional[str] = None,
 ) -> bool:
     """
     Submit booking form to Google Form
@@ -37,6 +44,8 @@ def submit_form(
         player_names: {"p1": "Name1", "p2": "Name2", "p3": "Name3"}
         court_time: Selected court and time slot
         user_email: Optional user email for confirmation
+        phone: Optional phone number
+        student_id: Optional student ID
 
     Returns:
         True if successful, False otherwise
@@ -50,16 +59,20 @@ def submit_form(
         if user_email:
             booking_name = player_names.get("p1")
             booking_email = user_email
+            booking_phone = phone
+            booking_student_code = student_id
         else:
             booking_name = BOOKING_DATA["name"]
             booking_email = BOOKING_DATA["email"]
+            booking_phone = BOOKING_DATA["phone"]
+            booking_student_code = BOOKING_DATA["student_code"]
 
         payload = {
             field_ids["name"]: booking_name,
-            field_ids["phone"]: BOOKING_DATA["phone"],
+            field_ids["phone"]: booking_phone,
             field_ids["email"]: booking_email,
             field_ids["type_of_client"]: BOOKING_DATA["type_of_client"],
-            field_ids["student_code"]: BOOKING_DATA["student_code"],
+            field_ids["student_code"]: booking_student_code,
             field_ids["department"]: BOOKING_DATA["department"],
             field_ids["faculty"]: BOOKING_DATA["faculty"],
             field_ids["degree"]: BOOKING_DATA["degree"],
@@ -81,14 +94,20 @@ def submit_form(
         logger.info(f"Response status: {response.status_code}")
 
         if response.status_code in [200, 201, 301]:
+            display_court_time = court_time
+            for court_data in COURTS:
+                if court_data["name"] == court_time:
+                    display_court_time = court_data.get("alias", court_time)
+                    break
+
             logger.info(
-                f"Form submitted successfully: {player_names['p1']}, {player_names['p2']}, {player_names['p3']} for {court_time}"
+                f"Form submitted successfully: {player_names['p1']}, {player_names['p2']}, {player_names['p3']} for {display_court_time}"
             )
 
             if user_email:
-                send_confirmation_email(player_names, court_time, user_email)
+                send_confirmation_email(player_names, display_court_time, user_email)
             else:
-                send_confirmation_email(player_names, court_time)
+                send_confirmation_email(player_names, display_court_time)
 
             return True
         else:
@@ -111,6 +130,8 @@ def wait_until_and_submit(
     target_hour: int,
     target_minute: int,
     user_email: Optional[str] = None,
+    phone: Optional[str] = None,
+    student_id: Optional[str] = None,
 ) -> bool:
     """
     Wait until target time, then submit form
@@ -124,6 +145,8 @@ def wait_until_and_submit(
         target_hour: Hour in 24-hour format (0-23)
         target_minute: Minute (0-59)
         user_email: Optional user email for confirmation
+        phone: Optional phone number
+        student_id: Optional student ID
 
     Returns:
         True if successful, False otherwise
@@ -140,11 +163,17 @@ def wait_until_and_submit(
                 logger.info(f"Task for booking {booking_id} was cancelled")
                 raise TaskCancelled(f"Booking {booking_id} was cancelled")
 
-            now = datetime.now()
+            now = datetime.now(TZ_BANGKOK)
             if now.hour == target_hour and now.minute == target_minute:
                 logger.info(f"Submitting form at {now.strftime('%H:%M:%S')}")
-                result = submit_form(player_names, court_time, user_email)
+                result = submit_form(
+                    player_names, court_time, user_email, phone, student_id
+                )
                 active_tasks.pop(booking_id, None)
+
+                if result:
+                    update_booking_status(booking_id, "submitted")
+
                 return result
 
             time.sleep(1)

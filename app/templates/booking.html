@@ -8,6 +8,11 @@
     <link rel="manifest" href="/static/site.webmanifest" />
     <link rel="stylesheet" href="/static/css/shared.css" />
     <link rel="stylesheet" href="/static/css/booking.css" />
+    <script
+      defer
+      src="https://analytics.psstee.dev/script.js"
+      data-website-id="dab03654-da70-42fc-bfc6-311564362026"
+    ></script>
   </head>
   <body>
     <div class="container">
@@ -22,36 +27,38 @@
       <div class="message success" id="success"></div>
       <div class="message error" id="error"></div>
 
-      <form id="bookingForm">
+      <form id="bookingForm" novalidate>
         <div class="section">
-          <div class="section-title">Players</div>
+          <div class="section-title">Booking Details</div>
 
           <div class="form-group">
             <label for="p1">Player 1</label>
             <input type="text" id="p1" name="p1" required />
+            <span class="error-message" id="p1-error"></span>
           </div>
 
           <div class="form-group">
             <label for="p2">Player 2</label>
             <input type="text" id="p2" name="p2" required />
+            <span class="error-message" id="p2-error"></span>
           </div>
 
           <div class="form-group">
             <label for="p3">Player 3</label>
             <input type="text" id="p3" name="p3" required />
+            <span class="error-message" id="p3-error"></span>
           </div>
-        </div>
 
-        <div class="section">
           <div class="form-group">
             <label for="court">Court</label>
             <select id="court" name="court" required>
               <option value="">Select a court</option>
             </select>
+            <span class="error-message" id="court-error"></span>
           </div>
 
           <div class="form-group">
-            <label for="submitTime">Time</label>
+            <label for="submitTime">Auto-Submit Time</label>
             <input
               type="time"
               id="submitTime"
@@ -59,8 +66,15 @@
               value="13:00"
               required
             />
+            <small class="form-text-muted"
+              >The time when the system will automatically submit your booking
+              request.</small
+            >
           </div>
+        </div>
 
+        <div class="section">
+          <div class="section-title">Contact Information</div>
           <div class="form-group">
             <label for="confirmationEmail">Confirmation Email (Optional)</label>
             <input
@@ -75,6 +89,30 @@
               be used.</small
             >
           </div>
+
+          <div id="extraFields" style="display: none">
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="08xxxxxxxx"
+              />
+              <span class="error-message" id="phone-error"></span>
+            </div>
+
+            <div class="form-group">
+              <label for="student_id">Student ID</label>
+              <input
+                type="text"
+                id="student_id"
+                name="student_id"
+                placeholder="6xxxxxxxxxx"
+              />
+              <span class="error-message" id="student_id-error"></span>
+            </div>
+          </div>
         </div>
 
         <button type="submit">Book Court</button>
@@ -82,6 +120,56 @@
       </form>
     </div>
 
+    <div class="modal" id="confirmBookingModal">
+      <div class="modal-content">
+        <div class="modal-header">Confirm Booking</div>
+        <div class="modal-body">
+          <p>Your booking has been scheduled but requires confirmation.</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong> <span id="confirmBookingInfo"></span>
+          </p>
+          <p style="margin-top: 8px; font-size: 12px">
+            Please enter the One-Time Password (OTP) sent to Discord to confirm
+            your booking.
+          </p>
+          <div style="margin-top: 8px; font-size: 12px">
+            <label
+              for="confirmationOtp"
+              style="display: block; margin-bottom: 6px"
+              >Confirmation OTP:</label
+            >
+            <input
+              type="text"
+              id="confirmationOtp"
+              class="password-input"
+              placeholder="Enter OTP"
+              style="margin-bottom: 0"
+            />
+            <div
+              id="confirmOtpErrorMsg"
+              style="
+                font-size: 11px;
+                margin-top: 4px;
+                display: none;
+                color: #c00;
+              "
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel" onclick="closeConfirmBookingModal()">
+            Later
+          </button>
+          <button
+            class="modal-btn confirm"
+            onclick="confirmBookingOtp()"
+            id="confirmBookingOtpBtn"
+          >
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    </div>
     <script>
       const form = document.getElementById("bookingForm");
       const successMsg = document.getElementById("success");
@@ -89,27 +177,30 @@
       const loading = document.getElementById("loading");
       const submitBtn = form.querySelector('button[type="submit"]');
       const courtSelect = document.getElementById("court");
+      const confirmationEmailInput =
+        document.getElementById("confirmationEmail");
+      const extraFieldsDiv = document.getElementById("extraFields");
+
+      let currentBookingIdToConfirm = null;
+      let currentP1NameToConfirm = null;
+
+      confirmationEmailInput.addEventListener("input", function () {
+        if (this.value.trim() !== "") {
+          extraFieldsDiv.style.display = "block";
+        } else {
+          extraFieldsDiv.style.display = "none";
+        }
+      });
 
       async function loadCourts() {
         try {
           const response = await fetch("/api/courts");
           const data = await response.json();
 
-          const courtDisplayNames = {
-            1: "Court 1, 1st Period",
-            2: "Court 1, 2nd Period",
-            3: "Court 2, 1st Period",
-            4: "Court 2, 2nd Period",
-            5: "Court 3, 1st Period",
-            6: "Court 3, 2nd Period",
-            7: "Court 4, 1st Period",
-            8: "Court 4, 2nd Period",
-          };
-
           data.courts.forEach((court) => {
             const option = document.createElement("option");
             option.value = court.name;
-            option.textContent = courtDisplayNames[court.id] || court.name;
+            option.textContent = court.alias || court.name;
             courtSelect.appendChild(option);
           });
         } catch (error) {
@@ -117,15 +208,188 @@
         }
       }
 
+      function showError(elementId, message) {
+        const inputElement = document.getElementById(elementId);
+        const errorMessageElement = document.getElementById(
+          elementId + "-error",
+        );
+        inputElement.classList.add("is-invalid");
+        errorMessageElement.textContent = message;
+        errorMessageElement.style.display = "block";
+      }
+
+      function clearError(elementId) {
+        const inputElement = document.getElementById(elementId);
+        const errorMessageElement = document.getElementById(
+          elementId + "-error",
+        );
+        inputElement.classList.remove("is-invalid");
+        errorMessageElement.textContent = "";
+        errorMessageElement.style.display = "none";
+      }
+
+      function validateForm(formData) {
+        let isValid = true;
+
+        // Validate Player 1
+        if (!formData.p1.trim()) {
+          showError("p1", "Player 1 name is required.");
+          isValid = false;
+        } else {
+          clearError("p1");
+        }
+
+        // Validate Player 2
+        if (!formData.p2.trim()) {
+          showError("p2", "Player 2 name is required.");
+          isValid = false;
+        } else {
+          clearError("p2");
+        }
+
+        // Validate Player 3
+        if (!formData.p3.trim()) {
+          showError("p3", "Player 3 name is required.");
+          isValid = false;
+        } else {
+          clearError("p3");
+        }
+
+        // Validate Court
+        if (!formData.court) {
+          showError("court", "Please select a court.");
+          isValid = false;
+        } else {
+          clearError("court");
+        }
+
+        // Validate Contact Info if Email is present
+        if (formData.confirmation_email.trim()) {
+          if (!formData.phone.trim()) {
+            showError(
+              "phone",
+              "Phone number is required when email is provided.",
+            );
+            isValid = false;
+          } else {
+            clearError("phone");
+          }
+
+          if (!formData.student_id.trim()) {
+            showError(
+              "student_id",
+              "Student ID is required when email is provided.",
+            );
+            isValid = false;
+          } else {
+            clearError("student_id");
+          }
+        } else {
+          clearError("phone");
+          clearError("student_id");
+        }
+
+        return isValid;
+      }
+
+      function loadSavedPlayers() {
+        const savedData = localStorage.getItem("booking.psstee");
+        if (savedData) {
+          try {
+            const players = JSON.parse(savedData);
+            if (players.p1) document.getElementById("p1").value = players.p1;
+            if (players.p2) document.getElementById("p2").value = players.p2;
+            if (players.p3) document.getElementById("p3").value = players.p3;
+            if (players.email) {
+              document.getElementById("confirmationEmail").value =
+                players.email;
+              extraFieldsDiv.style.display = "block";
+            }
+            if (players.phone)
+              document.getElementById("phone").value = players.phone;
+            if (players.student_id)
+              document.getElementById("student_id").value = players.student_id;
+          } catch (e) {
+            console.error("Error loading saved players:", e);
+          }
+        }
+      }
+
       loadCourts();
+      loadSavedPlayers();
+
+      function openConfirmBookingModal(bookingId, playerName) {
+        currentBookingIdToConfirm = bookingId;
+        currentP1NameToConfirm = playerName;
+        document.getElementById("confirmBookingInfo").textContent =
+          `#${bookingId} - ${playerName}`;
+        document.getElementById("confirmationOtp").value = "";
+        document.getElementById("confirmOtpErrorMsg").style.display = "none";
+        document.getElementById("confirmBookingModal").classList.add("active");
+        document.getElementById("confirmationOtp").focus();
+      }
+
+      function closeConfirmBookingModal() {
+        document
+          .getElementById("confirmBookingModal")
+          .classList.remove("active");
+        currentBookingIdToConfirm = null;
+        currentP1NameToConfirm = null;
+      }
+
+      async function confirmBookingOtp() {
+        if (!currentBookingIdToConfirm) return;
+
+        const otp = document.getElementById("confirmationOtp").value;
+        if (!otp) {
+          document.getElementById("confirmOtpErrorMsg").textContent =
+            "Please enter the OTP.";
+          document.getElementById("confirmOtpErrorMsg").style.display = "block";
+          return;
+        }
+
+        const confirmBtn = document.getElementById("confirmBookingOtpBtn");
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirming...";
+        document.getElementById("confirmOtpErrorMsg").style.display = "none";
+
+        try {
+          const response = await fetch("/api/confirm-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking_id: currentBookingIdToConfirm,
+              confirmation_code: otp,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            successMsg.textContent = `Booking #${currentBookingIdToConfirm} confirmed successfully!`;
+            successMsg.style.display = "block";
+            closeConfirmBookingModal();
+          } else {
+            document.getElementById("confirmOtpErrorMsg").textContent =
+              data.detail || "Failed to confirm booking.";
+            document.getElementById("confirmOtpErrorMsg").style.display =
+              "block";
+          }
+        } catch (error) {
+          document.getElementById("confirmOtpErrorMsg").textContent =
+            `Error: ${error.message}`;
+          document.getElementById("confirmOtpErrorMsg").style.display = "block";
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Confirm Booking";
+        }
+      }
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         successMsg.style.display = "none";
         errorMsg.style.display = "none";
-        loading.style.display = "block";
-        submitBtn.disabled = true;
 
         const formData = {
           p1: document.getElementById("p1").value,
@@ -134,35 +398,90 @@
           court: document.getElementById("court").value,
           submit_time: document.getElementById("submitTime").value,
           confirmation_email:
-            document.getElementById("confirmationEmail").value || null,
+            document.getElementById("confirmationEmail").value || "",
+          phone: document.getElementById("phone").value || "",
+          student_id: document.getElementById("student_id").value || "",
         };
+
+        if (!validateForm(formData)) {
+          // If validation fails, stop here
+          return;
+        }
+
+        const apiData = {
+          ...formData,
+          confirmation_email: formData.confirmation_email || null,
+          phone: formData.phone || null,
+          student_id: formData.student_id || null,
+        };
+
+        loading.style.display = "block";
+        submitBtn.disabled = true;
 
         try {
           const response = await fetch("/api/book", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
+            body: JSON.stringify(apiData),
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            successMsg.innerHTML = `Booking confirmed for ${formData.p1}, ${formData.p2}, ${formData.p3} at ${formData.submit_time}`;
-            successMsg.style.display = "block";
+            localStorage.setItem(
+              "booking.psstee",
+              JSON.stringify({
+                p1: formData.p1,
+                p2: formData.p2,
+                p3: formData.p3,
+                email: formData.confirmation_email,
+                phone: formData.phone,
+                student_id: formData.student_id,
+              }),
+            );
+
+            openConfirmBookingModal(data.booking.id, formData.p1);
+
             form.reset();
+            clearError("p1");
+            clearError("p2");
+            clearError("p3");
+            clearError("court");
+            clearError("phone");
+            clearError("student_id");
+            extraFieldsDiv.style.display = "none";
             document.getElementById("submitTime").value = "13:00";
+            loadSavedPlayers();
           } else {
-            errorMsg.innerHTML = `Error: ${data.detail || "Failed to schedule booking"}`;
+            errorMsg.textContent = `Error: ${data.detail || "Failed to schedule booking"}`;
             errorMsg.style.display = "block";
           }
         } catch (error) {
-          errorMsg.innerHTML = `Error: ${error.message}`;
+          errorMsg.textContent = `Error: ${error.message}`;
           errorMsg.style.display = "block";
         } finally {
           loading.style.display = "none";
           submitBtn.disabled = false;
         }
       });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeConfirmBookingModal();
+        }
+      });
+
+      document
+        .getElementById("confirmationOtp")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBookingOtp();
+          }
+        });
     </script>
+    <footer>
+      <p>&copy; 2025 Pyae Sone Shin Thant</p>
+    </footer>
   </body>
 </html>

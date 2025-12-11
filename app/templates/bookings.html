@@ -8,6 +8,11 @@
     <link rel="manifest" href="/static/site.webmanifest" />
     <link rel="stylesheet" href="/static/css/shared.css" />
     <link rel="stylesheet" href="/static/css/bookings.css" />
+    <script
+      defer
+      src="https://analytics.psstee.dev/script.js"
+      data-website-id="dab03654-da70-42fc-bfc6-311564362026"
+    ></script>
   </head>
   <body>
     <div class="container">
@@ -24,10 +29,46 @@
       <div class="message success" id="success"></div>
       <div class="message error" id="error"></div>
 
+      <div class="search-bar" style="margin-bottom: 20px">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search bookings by player name or ID..."
+          style="
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+          "
+          onkeyup="filterBookings()"
+        />
+      </div>
+
       <div class="loading" id="loading" style="display: none">
         Loading bookings...
       </div>
-      <div class="bookings-list" id="bookingsList"></div>
+
+      <div class="bookings-container">
+        <div class="table-wrapper">
+          <table id="bookingsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Players</th>
+                <th>Court</th>
+                <th>Auto-Submit Time</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsList">
+              <!-- Rows will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="emptyStateContainer"></div>
     </div>
 
     <div class="modal" id="cancelModal">
@@ -38,32 +79,54 @@
           <p style="margin-top: 12px; font-size: 12px; color: #999">
             <strong>Booking:</strong> <span id="cancelBookingInfo"></span>
           </p>
-          <p style="margin-top: 8px; font-size: 12px">
+
+          <div style="margin-top: 8px; font-size: 12px">
             <label
               for="cancelPassword"
               style="display: block; margin-bottom: 6px"
               >Cancel Password / OTP:</label
             >
-            <div style="display: flex; gap: 8px;">
-                <input
+            <div style="display: flex; gap: 8px">
+              <input
                 type="password"
                 id="cancelPassword"
                 class="password-input"
                 placeholder="Enter password or OTP"
-                style="margin-bottom: 0;"
-                />
-                <button 
-                    type="button" 
-                    id="requestCodeBtn"
-                    onclick="requestCancelCode()"
-                    style="padding: 0 12px; font-size: 12px; white-space: nowrap; cursor: pointer; background: #5865F2; color: white; border: none; border-radius: 2px;"
-                    title="Get OTP via Discord"
-                >
-                    Get Code
-                </button>
+                style="margin-bottom: 0"
+              />
+              <button
+                type="button"
+                id="requestCodeBtn"
+                onclick="requestCancelCode()"
+                style="
+                  padding: 0 12px;
+                  font-size: 12px;
+                  white-space: nowrap;
+                  cursor: pointer;
+                  background: #5865f2;
+                  color: white;
+                  border: none;
+                  border-radius: 2px;
+                "
+                title="Get OTP via Discord"
+              >
+                Get Code
+              </button>
             </div>
-            <div id="requestCodeMsg" style="font-size: 11px; margin-top: 4px; display: none;"></div>
-          </p>
+            <div
+              id="requestCodeMsg"
+              style="font-size: 11px; margin-top: 4px; display: none"
+            ></div>
+            <div
+              id="cancelOtpErrorMsg"
+              style="
+                font-size: 11px;
+                margin-top: 4px;
+                display: none;
+                color: #c00;
+              "
+            ></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="modal-btn cancel" onclick="closeCancelModal()">
@@ -80,134 +143,496 @@
       </div>
     </div>
 
+    <div class="modal" id="requestConfirmCodeModal">
+      <div class="modal-content">
+        <div class="modal-header">Confirm Pending Booking</div>
+        <div class="modal-body">
+          <p>You can request a new confirmation code for this booking.</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong>
+            <span id="requestConfirmBookingInfo"></span>
+          </p>
+
+          <div style="margin-top: 8px; font-size: 12px">
+            <label
+              for="confirmBookingOtpInput"
+              style="display: block; margin-bottom: 6px"
+            >
+              Confirmation OTP:
+            </label>
+
+            <div style="display: flex; gap: 8px">
+              <input
+                type="text"
+                id="confirmBookingOtpInput"
+                class="password-input"
+                placeholder="Enter OTP to confirm"
+                style="margin-bottom: 0"
+              />
+
+              <button
+                type="button"
+                id="requestConfirmCodeBtn"
+                onclick="requestConfirmCodeFromBookingsPage()"
+                class="action-btn request-confirm-btn"
+                style="
+                  padding: 0 12px;
+                  font-size: 12px;
+                  white-space: nowrap;
+                  cursor: pointer;
+                  background: #5865f2;
+                  color: white;
+                  border: none;
+                  border-radius: 2px;
+                "
+                title="Get OTP via Discord"
+              >
+                Get Code
+              </button>
+            </div>
+
+            <div
+              id="requestConfirmCodeMsg"
+              style="font-size: 11px; margin-top: 4px; display: none"
+            ></div>
+            <div
+              id="confirmBookingOtpErrorMsg"
+              style="
+                font-size: 11px;
+                margin-top: 4px;
+                display: none;
+                color: #c00;
+              "
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="modal-btn cancel"
+            onclick="closeRequestConfirmCodeModal()"
+          >
+            Close
+          </button>
+          <button
+            class="modal-btn confirm"
+            onclick="confirmBookingFromBookingsPage()"
+            id="confirmBookingFromBookingsPageBtn"
+          >
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       let allBookings = [];
       let cancelingBookingId = null;
+      let otpRateLimitSeconds = 60;
+      let otpCountdownInterval = null;
 
-      function isBookingPast(booking) {
-        if (!booking.scheduled_datetime) return false;
-        const now = new Date();
-        const bookingTime = new Date(booking.scheduled_datetime);
-        if (isNaN(bookingTime.getTime())) {
-          console.warn("Invalid date format:", booking.scheduled_datetime);
-          return false;
+      let requestConfirmingBookingId = null;
+      let requestConfirmingPlayerName = null;
+      let requestConfirmingCourtName = null;
+      let requestConfirmingBookingTime = null;
+      let confirmOtpCountdownInterval = null;
+
+      function startCountdown(btnElementId, msgElementId, intervalVar) {
+        const btn = document.getElementById(btnElementId);
+        const msg = document.getElementById(msgElementId);
+        let timeLeft = otpRateLimitSeconds;
+
+        btn.disabled = true;
+        msg.style.display = "block";
+        msg.style.color = "#007bff";
+
+        if (intervalVar) {
+          clearInterval(intervalVar);
         }
-        return bookingTime < now;
+
+        intervalVar = setInterval(() => {
+          if (timeLeft <= 0) {
+            clearInterval(intervalVar);
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.textContent = "Get Code";
+            msg.style.display = "none";
+            return;
+          }
+          btn.textContent = `Resend in ${timeLeft}s`;
+          timeLeft--;
+        }, 1000);
+        return intervalVar;
       }
 
       async function requestCancelCode() {
         if (!cancelingBookingId) return;
-        
+
         const btn = document.getElementById("requestCodeBtn");
         const msg = document.getElementById("requestCodeMsg");
-        
+
+        if (btn.disabled && !otpCountdownInterval) return;
+
+        clearInterval(otpCountdownInterval);
         btn.disabled = true;
         btn.style.opacity = "0.7";
+        btn.textContent = "Sending...";
         msg.style.display = "none";
-        
+
         try {
-            const response = await fetch("/api/request-cancel-code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ booking_id: cancelingBookingId }),
-            });
-            
-            const data = await response.json();
-            
-            msg.style.display = "block";
-            if (response.ok) {
-                msg.style.color = "#155724";
-                msg.textContent = "Code sent to Discord channel!";
-            } else {
-                msg.style.color = "#c00";
-                msg.textContent = data.detail || "Failed to send code";
-            }
-        } catch (error) {
-            msg.style.display = "block";
+          const response = await fetch("/api/request-cancel-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ booking_id: cancelingBookingId }),
+          });
+
+          const data = await response.json();
+
+          msg.style.display = "block";
+          if (response.ok) {
+            msg.style.color = "#155724";
+            msg.textContent = "Code sent to Discord channel!";
+            otpCountdownInterval = startCountdown(
+              "requestCodeBtn",
+              "requestCodeMsg",
+              otpCountdownInterval,
+            );
+          } else {
             msg.style.color = "#c00";
-            msg.textContent = "Error: " + error.message;
-        } finally {
+            msg.textContent = data.detail || "Failed to send code";
             btn.disabled = false;
             btn.style.opacity = "1";
+            btn.textContent = "Get Code";
+          }
+        } catch (error) {
+          msg.style.display = "block";
+          msg.style.color = "#c00";
+          msg.textContent = "Error: " + error.message;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
         }
+      }
+
+      function openRequestConfirmCodeModal(
+        bookingId,
+        playerName,
+        courtName,
+        bookingTime,
+      ) {
+        requestConfirmingBookingId = bookingId;
+        requestConfirmingPlayerName = playerName;
+        requestConfirmingCourtName = courtName;
+        requestConfirmingBookingTime = bookingTime;
+
+        document.getElementById("requestConfirmBookingInfo").textContent =
+          `#${bookingId} - ${playerName} (${courtName} at ${bookingTime})`;
+        document.getElementById("requestConfirmCodeMsg").style.display = "none";
+        document.getElementById("confirmBookingOtpInput").value = "";
+        document.getElementById("confirmBookingOtpErrorMsg").style.display =
+          "none";
+        document
+          .getElementById("requestConfirmCodeModal")
+          .classList.add("active");
+        document.getElementById("confirmBookingOtpInput").focus();
+      }
+
+      function closeRequestConfirmCodeModal() {
+        document
+          .getElementById("requestConfirmCodeModal")
+          .classList.remove("active");
+        requestConfirmingBookingId = null;
+        requestConfirmingPlayerName = null;
+        requestConfirmingCourtName = null;
+        requestConfirmingBookingTime = null;
+        if (confirmOtpCountdownInterval) {
+          clearInterval(confirmOtpCountdownInterval);
+          const btn = document.getElementById("requestConfirmCodeBtn");
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
+        }
+      }
+
+      async function requestConfirmCodeFromBookingsPage() {
+        if (!requestConfirmingBookingId) return;
+
+        const btn = document.getElementById("requestConfirmCodeBtn");
+        const msg = document.getElementById("requestConfirmCodeMsg");
+
+        if (btn.disabled && confirmOtpCountdownInterval) return;
+
+        clearInterval(confirmOtpCountdownInterval);
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+        btn.textContent = "Sending...";
+        msg.style.display = "none";
+
+        try {
+          const response = await fetch("/api/request-confirm-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ booking_id: requestConfirmingBookingId }),
+          });
+
+          const data = await response.json();
+
+          msg.style.display = "block";
+          if (response.ok) {
+            msg.style.color = "#155724";
+            msg.textContent = "Confirmation code sent to Discord channel!";
+            confirmOtpCountdownInterval = startCountdown(
+              "requestConfirmCodeBtn",
+              "requestConfirmCodeMsg",
+              confirmOtpCountdownInterval,
+            );
+          } else {
+            msg.style.color = "#c00";
+            msg.textContent = data.detail || "Failed to send confirmation code";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.textContent = "Get Code";
+          }
+        } catch (error) {
+          msg.style.display = "block";
+          msg.style.color = "#c00";
+          msg.textContent = "Error: " + error.message;
+          btn.disabled = false;
+          btn.style.opacity = "1";
+          btn.textContent = "Get Code";
+        }
+      }
+
+      async function confirmBookingFromBookingsPage() {
+        if (!requestConfirmingBookingId) return;
+
+        const otp = document.getElementById("confirmBookingOtpInput").value;
+        if (!otp) {
+          document.getElementById("confirmBookingOtpErrorMsg").textContent =
+            "Please enter the OTP.";
+          document.getElementById("confirmBookingOtpErrorMsg").style.display =
+            "block";
+          return;
+        }
+
+        const confirmBtn = document.getElementById(
+          "confirmBookingFromBookingsPageBtn",
+        );
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Confirming...";
+        document.getElementById("confirmBookingOtpErrorMsg").style.display =
+          "none";
+
+        try {
+          const response = await fetch("/api/confirm-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              booking_id: requestConfirmingBookingId,
+              confirmation_code: otp,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            document.getElementById("success").textContent =
+              `Booking #${requestConfirmingBookingId} confirmed successfully!`;
+            document.getElementById("success").style.display = "block";
+            closeRequestConfirmCodeModal();
+            loadBookings();
+          } else {
+            document.getElementById("confirmBookingOtpErrorMsg").textContent =
+              data.detail || "Failed to confirm booking.";
+            document.getElementById("confirmBookingOtpErrorMsg").style.display =
+              "block";
+          }
+        } catch (error) {
+          document.getElementById("confirmBookingOtpErrorMsg").textContent =
+            `Error: ${error.message}`;
+          document.getElementById("confirmBookingOtpErrorMsg").style.display =
+            "block";
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Confirm Booking";
+        }
+      }
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        return text
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      let debounceTimer;
+      function filterBookings() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const query = document
+            .getElementById("searchInput")
+            .value.toLowerCase();
+          const rows = document.querySelectorAll("#bookingsList tr");
+          let visibleCount = 0;
+
+          rows.forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
+              row.style.display = "";
+              visibleCount++;
+            } else {
+              row.style.display = "none";
+            }
+          });
+
+          const infoMsg = document.getElementById("info");
+          if (query.trim() !== "") {
+            infoMsg.innerHTML = `Found ${visibleCount} booking${visibleCount !== 1 ? "s" : ""}`;
+            infoMsg.style.display = "block";
+          } else {
+            infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
+          }
+        }, 300);
       }
 
       async function loadBookings() {
         const loading = document.getElementById("loading");
         const bookingsList = document.getElementById("bookingsList");
+        const emptyStateContainer = document.getElementById(
+          "emptyStateContainer",
+        );
+        const tableContainer = document.querySelector(".bookings-container");
         const infoMsg = document.getElementById("info");
 
-        loading.style.display = "block";
+        if (allBookings.length === 0) {
+          loading.style.display = "block";
+        }
+
+        const searchInput = document.getElementById("searchInput");
+        const currentQuery = searchInput ? searchInput.value : "";
+
         bookingsList.innerHTML = "";
+        emptyStateContainer.innerHTML = "";
         infoMsg.style.display = "none";
 
         try {
-          const response = await fetch("/api/bookings");
+          const response = await fetch(
+            `/api/bookings?t=${new Date().getTime()}`,
+          );
           const data = await response.json();
           allBookings = data.bookings || [];
 
           if (allBookings.length === 0) {
-            bookingsList.innerHTML = `
-                        <div class="empty-state">
-                            <p>No bookings scheduled yet</p>
-                            <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
-                        </div>
-                    `;
+            tableContainer.style.display = "none";
+            emptyStateContainer.innerHTML = `
+                <div class="empty-state">
+                    <p>No bookings scheduled yet</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 8px;">Create your first booking to get started</p>
+                </div>
+            `;
+            infoMsg.style.display = "none";
           } else {
+            tableContainer.style.display = "block";
             bookingsList.innerHTML = allBookings
               .reverse()
               .map((booking) => {
-                const isPast = isBookingPast(booking);
-                const statusText = isPast ? "Completed" : "Scheduled";
-                const statusClass = isPast ? "submitted" : "";
+                let statusText = booking.status;
+                let statusClass = booking.status;
+
+                switch (booking.status) {
+                  case "pending":
+                    statusText = "Pending";
+                    statusClass = "pending";
+                    break;
+                  case "confirmed":
+                    statusText = "Confirmed";
+                    statusClass = "confirmed";
+                    break;
+                  case "cancelled":
+                    statusText = "Cancelled";
+                    statusClass = "cancelled";
+                    break;
+                  case "submitted":
+                    statusText = "Completed";
+                    statusClass = "submitted";
+                    break;
+                  default:
+                    statusText = booking.status;
+                    statusClass = "scheduled";
+                    break;
+                }
+
+                const p1 = escapeHtml(booking.p1);
+                const p2 = escapeHtml(booking.p2);
+                const p3 = escapeHtml(booking.p3);
+
+                const displayCourtName = booking.alias || booking.court;
+
+                let displayTime = booking.submit_time;
+                if (booking.scheduled_datetime) {
+                  const dateObj = new Date(booking.scheduled_datetime);
+                  if (!isNaN(dateObj.getTime())) {
+                    displayTime = dateObj.toLocaleString([], {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                  }
+                }
 
                 return `
-                            <div class="booking-card ${statusClass}">
-                                <div class="booking-header">
-                                    <div>
-                                        <div class="booking-players">${booking.p1}, ${booking.p2}, ${booking.p3}</div>
-                                        <div class="booking-id">Booking #${booking.id}</div>
-                                    </div>
-                                    <span class="booking-status ${statusClass}">${statusText}</span>
-                                </div>
-                                <div class="booking-details">
-                                    <div class="detail-item">
-                                        <div class="detail-label">Court</div>
-                                        <div class="detail-value">${booking.court}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Submit Time</div>
-                                        <div class="detail-value">${booking.scheduled_datetime || booking.submit_time}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Created</div>
-                                        <div class="detail-value">${new Date(booking.created_at).toLocaleDateString()}</div>
-                                    </div>
-                                    <div class="detail-item">
-                                        <div class="detail-label">Email</div>
-                                        <div class="detail-value">${booking.confirmation_email || "None"}</div>
-                                    </div>
-                                </div>
-                                ${
-                                  !isPast
-                                    ? `
-                                    <div class="booking-actions">
-                                        <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${booking.p1}')">Cancel Booking</button>
-                                    </div>
+                    <tr>
+                        <td data-label="ID" style="color: #718096; font-size: 12px;">#${booking.id}</td>
+                        <td data-label="Players">
+                            <div style="font-weight: 500;">${p1}</div>
+                            <div style="font-size: 12px; color: #718096;">${p2}, ${p3}</div>
+                        </td>
+                        <td data-label="Court">${displayCourtName}</td>
+                        <td data-label="Time">${displayTime}</td>
+                        <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td data-label="Action">
+                            <div class="action-buttons-group">
+                            ${
+                              booking.status === "pending"
+                                ? `
+                                <button class="action-btn request-confirm-btn" onclick="openRequestConfirmCodeModal(${booking.id}, '${p1.replace(/'/g, "\'")}', '${displayCourtName.replace(/'/g, "\'")}', '${displayTime}')">
+                                    Request Confirm Code
+                                </button>
                                 `
-                                    : ""
-                                }
+                                : ""
+                            }
+                            ${
+                              booking.status !== "cancelled" &&
+                              booking.status !== "submitted"
+                                ? `
+                                <button class="cancel-btn" onclick="openCancelModal(${booking.id}, '${p1.replace(/'/g, "\'")}')">
+                                    Cancel
+                                </button>
+                            `
+                                : ""
+                            }
                             </div>
-                        `;
+                        </td>
+                    </tr>
+                `;
               })
               .join("");
 
             infoMsg.innerHTML = `${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} scheduled`;
             infoMsg.style.display = "block";
+
+            if (currentQuery) {
+              filterBookings();
+            }
           }
         } catch (error) {
           console.error("Error loading bookings:", error);
-          bookingsList.innerHTML =
+          emptyStateContainer.innerHTML =
             '<div class="empty-state"><p>Error loading bookings</p></div>';
         } finally {
           loading.style.display = "none";
@@ -261,9 +686,10 @@
             closeCancelModal();
             await loadBookings();
           } else {
-            document.getElementById("error").textContent =
+            document.getElementById("cancelOtpErrorMsg").textContent =
               data.detail || "Failed to cancel booking";
-            document.getElementById("error").style.display = "block";
+            document.getElementById("cancelOtpErrorMsg").style.display =
+              "block";
           }
         } catch (error) {
           document.getElementById("error").textContent =
@@ -276,8 +702,29 @@
       }
 
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeCancelModal();
+        if (e.key === "Escape") {
+          closeCancelModal();
+          closeRequestConfirmCodeModal();
+        }
       });
+
+      document
+        .getElementById("cancelPassword")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmCancel();
+          }
+        });
+
+      document
+        .getElementById("confirmBookingOtpInput")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBookingFromBookingsPage();
+          }
+        });
 
       loadBookings();
       setInterval(loadBookings, 30000);
