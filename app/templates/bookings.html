@@ -236,6 +236,37 @@
       let requestConfirmingBookingTime = null;
       let confirmOtpCountdownInterval = null;
 
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+      let socket;
+
+      function connectWebSocket() {
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = function (e) {
+          console.log("WebSocket connection established");
+        };
+
+        socket.onmessage = function (event) {
+          const data = JSON.parse(event.data);
+
+          if (data.event === "new_booking") {
+            loadBookings();
+          } else if (data.event === "status_update") {
+            loadBookings();
+          }
+        };
+
+        socket.onclose = function (event) {
+          console.log("WebSocket connection closed, retrying in 2s");
+          setTimeout(connectWebSocket, 2000);
+        };
+
+        socket.onerror = function (error) {
+          console.log("WebSocket error: ", error);
+        };
+      }
+
       function startCountdown(btnElementId, msgElementId, intervalVar) {
         const btn = document.getElementById(btnElementId);
         const msg = document.getElementById(msgElementId);
@@ -439,7 +470,6 @@
               `Booking #${requestConfirmingBookingId} confirmed successfully!`;
             document.getElementById("success").style.display = "block";
             closeRequestConfirmCodeModal();
-            loadBookings();
           } else {
             document.getElementById("confirmBookingOtpErrorMsg").textContent =
               data.detail || "Failed to confirm booking.";
@@ -514,16 +544,15 @@
         const searchInput = document.getElementById("searchInput");
         const currentQuery = searchInput ? searchInput.value : "";
 
-        bookingsList.innerHTML = "";
-        emptyStateContainer.innerHTML = "";
-        infoMsg.style.display = "none";
-
         try {
           const response = await fetch(
             `/api/bookings?t=${new Date().getTime()}`,
           );
           const data = await response.json();
           allBookings = data.bookings || [];
+
+          bookingsList.innerHTML = "";
+          emptyStateContainer.innerHTML = "";
 
           if (allBookings.length === 0) {
             tableContainer.style.display = "none";
@@ -586,7 +615,7 @@
                 }
 
                 return `
-                    <tr>
+                    <tr data-booking-id="${booking.id}">
                         <td data-label="ID" style="color: #718096; font-size: 12px;">#${booking.id}</td>
                         <td data-label="Players">
                             <div style="font-weight: 500;">${p1}</div>
@@ -594,8 +623,8 @@
                         </td>
                         <td data-label="Court">${displayCourtName}</td>
                         <td data-label="Time">${displayTime}</td>
-                        <td data-label="Status"><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td data-label="Action">
+                        <td data-label="Status" class="status-cell"><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td data-label="Action" class="actions-cell">
                             <div class="action-buttons-group">
                             ${
                               booking.status === "pending"
@@ -632,8 +661,6 @@
           }
         } catch (error) {
           console.error("Error loading bookings:", error);
-          emptyStateContainer.innerHTML =
-            '<div class="empty-state"><p>Error loading bookings</p></div>';
         } finally {
           loading.style.display = "none";
         }
@@ -684,7 +711,6 @@
               "Booking cancelled successfully";
             document.getElementById("success").style.display = "block";
             closeCancelModal();
-            await loadBookings();
           } else {
             document.getElementById("cancelOtpErrorMsg").textContent =
               data.detail || "Failed to cancel booking";
@@ -727,7 +753,7 @@
         });
 
       loadBookings();
-      setInterval(loadBookings, 30000);
+      connectWebSocket();
     </script>
   </body>
 </html>

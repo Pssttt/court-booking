@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from config.settingstest import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 from app.storage import update_booking_status
+from app.websockets import manager
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,13 @@ async def wait_until_and_submit(
 
                 if result:
                     update_booking_status(booking_id, "submitted")
+                    await manager.broadcast(
+                        {
+                            "event": "status_update",
+                            "booking_id": booking_id,
+                            "status": "submitted",
+                        }
+                    )
 
                 return result
 

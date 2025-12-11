@@ -8,3 +8,4 @@ python-dotenv==1.0.0
 resend>=2.19.0
 sqlalchemy==2.0.45
 psycopg[binary]
+websockets>=15.0.1

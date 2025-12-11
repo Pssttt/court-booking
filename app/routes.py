@@ -3,7 +3,13 @@ API Routes
 All endpoints are defined here
 """
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 import logging
 import html
 from datetime import datetime, timedelta, timezone
@@ -34,6 +40,7 @@ from app.otp_manager import (
     RateLimitExceededError,
 )
 from config.settings import COURTS, CANCEL_PASSWORD
+from app.websockets import manager
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +75,16 @@ def get_next_submission_time(hour: int, minute: int) -> tuple[int, int, str]:
 
     submission_date = target_time.strftime("%Y-%m-%d %H:%M")
     return target_time.hour, target_time.minute, submission_date
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 @router.post("/book", response_model=BookingResponse)
@@ -159,6 +176,13 @@ async def create_booking(booking: BookingRequest):
         logger.info(
             f"Scheduled: {booking.p1}, {booking.p2}, {booking.p3} for {booking.court} at {submission_date}"
         )
+
+        court_aliases = {c["name"]: c.get("alias", c["name"]) for c in COURTS}
+        booking_info["alias"] = court_aliases.get(
+            booking_info["court"], booking_info["court"]
+        )
+
+        await manager.broadcast({"event": "new_booking", "booking": booking_info})
 
         return BookingResponse(
             status="pending",
@@ -261,6 +285,14 @@ async def confirm_booking(
         f"Booking {request.booking_id} confirmed and scheduled for submission successfully."
     )
 
+    await manager.broadcast(
+        {
+            "event": "status_update",
+            "booking_id": request.booking_id,
+            "status": "confirmed",
+        }
+    )
+
     return {
         "status": "confirmed",
         "message": f"Booking {request.booking_id} has been confirmed and submission scheduled.",
@@ -319,6 +351,14 @@ async def cancel_booking(request: CancelBookingRequest):
 
     logger.info(
         f"Cancelled booking {request.booking_id}: {updated_booking['p1']}, {updated_booking['p2']}, {updated_booking['p3']}"
+    )
+
+    await manager.broadcast(
+        {
+            "event": "status_update",
+            "booking_id": request.booking_id,
+            "status": "cancelled",
+        }
     )
 
     return {
