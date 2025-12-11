@@ -24,10 +24,11 @@ from app.storage import (
     get_booking,
     update_booking_status,
 )
-from app.discord_service import (
+from app.discord_service import send_otp_to_discord
+from app.telegram_service import send_otp_to_telegram
+from app.otp_manager import (
     generate_otp,
     store_otp,
-    send_otp_to_discord,
     verify_otp,
     check_otp_request_rate_limit,
     RateLimitExceededError,
@@ -132,16 +133,27 @@ async def create_booking(booking: BookingRequest):
 
         booking_datetime = datetime.strptime(submission_date, "%Y-%m-%d %H:%M")
 
-        if not send_otp_to_discord(
+        discord_success = send_otp_to_discord(
             booking_info["id"],
             booking.p1,
             confirmation_code,
             otp_type="confirmation",
             court_name=booking.court,
             booking_time=booking_datetime,
-        ):
+        )
+
+        telegram_success = send_otp_to_telegram(
+            booking_info["id"],
+            booking.p1,
+            confirmation_code,
+            otp_type="confirmation",
+            court_name=booking.court,
+            booking_time=booking_datetime,
+        )
+
+        if not discord_success and not telegram_success:
             logger.warning(
-                f"Failed to send confirmation OTP for booking {booking_info['id']} to Discord."
+                f"Failed to send confirmation OTP for booking {booking_info['id']} to Discord or Telegram."
             )
 
         logger.info(
@@ -334,10 +346,16 @@ async def request_cancel_code(request: CancelCodeRequest):
     code = generate_otp()
     store_otp(request.booking_id, code)
 
-    if send_otp_to_discord(
+    discord_success = send_otp_to_discord(
         request.booking_id, booking["p1"], code, otp_type="cancellation"
-    ):
-        return {"message": "Verification code sent to Discord channel"}
+    )
+
+    telegram_success = send_otp_to_telegram(
+        request.booking_id, booking["p1"], code, otp_type="cancellation"
+    )
+
+    if discord_success or telegram_success:
+        return {"message": "Verification code sent to notification channels"}
     else:
         raise HTTPException(
             status_code=500,
@@ -381,15 +399,26 @@ async def request_confirm_code(request: ConfirmCodeRequest):
 
     booking_datetime = datetime.fromisoformat(booking_datetime_str)
 
-    if send_otp_to_discord(
+    discord_success = send_otp_to_discord(
         request.booking_id,
         booking["p1"],
         code,
         otp_type="confirmation",
         court_name=court_name,
         booking_time=booking_datetime,
-    ):
-        return {"message": "Confirmation code sent to Discord channel."}
+    )
+
+    telegram_success = send_otp_to_telegram(
+        request.booking_id,
+        booking["p1"],
+        code,
+        otp_type="confirmation",
+        court_name=court_name,
+        booking_time=booking_datetime,
+    )
+
+    if discord_success or telegram_success:
+        return {"message": "Confirmation code sent to notification channels."}
     else:
         raise HTTPException(
             status_code=500,

@@ -134,3 +134,12 @@ CANCEL_PASSWORD = os.getenv("CANCEL_PASSWORD")
 DISCORD_CONFIG = {
     "webhook_url": os.getenv("DISCORD_WEBHOOK_URL"),
 }
+
+# ============================================================================
+# TELEGRAM CONFIGURATION
+# ============================================================================
+
+TELEGRAM_CONFIG = {
+    "bot_token": os.getenv("TELEGRAM_BOT_TOKEN"),
+    "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
+}
