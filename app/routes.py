@@ -282,6 +282,12 @@ async def cancel_booking(request: CancelBookingRequest):
         logger.error(f"Booking {request.booking_id} not found")
         raise HTTPException(status_code=404, detail="Booking not found")
 
+    if booking.get("status") == "submitted":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot cancel a booking that has already been submitted.",
+        )
+
     cancel_task(request.booking_id)
 
     if not update_booking_status(request.booking_id, "cancelled"):
