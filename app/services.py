@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 import time
 from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
+from app.storage import update_booking_status
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,10 @@ def wait_until_and_submit(
                     player_names, court_time, user_email, phone, student_id
                 )
                 active_tasks.pop(booking_id, None)
+
+                if result:
+                    update_booking_status(booking_id, "submitted")
+
                 return result
 
             time.sleep(1)
