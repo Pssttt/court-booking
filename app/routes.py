@@ -41,6 +41,7 @@ from app.otp_manager import (
 )
 from config.settings import COURTS, CANCEL_PASSWORD
 from app.websockets import manager
+from app.form_validator import check_form_schema
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +211,14 @@ async def get_bookings():
         booking["alias"] = court_aliases.get(booking["court"], booking["court"])
 
     return {"total": len(bookings), "bookings": bookings}
+
+
+@router.get("/health/form-check")
+async def get_form_health_check():
+    """
+    Triggers a check on the Google Form schema to ensure configured fields are present.
+    """
+    return await check_form_schema()
 
 
 @router.get("/courts")
