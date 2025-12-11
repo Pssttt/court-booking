@@ -8,7 +8,7 @@ import logging
 import random
 import string
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from config.settings import COURTS, DISCORD_CONFIG
 
@@ -106,54 +106,51 @@ def send_otp_to_discord(
         return False
 
     title = ""
-    description = ""
-    color = 0  # Default color
+    color = 0
 
     if otp_type == "cancellation":
-        title = "🔐 Cancellation Code Requested"
-        description = (
-            f"A cancellation code was requested for Booking **#{booking_id}**."
-        )
-        color = 16711680  # Red
+        title = f"🔐 Cancellation Code Requested for Booking **#{booking_id}**"
+        color = 0xE67E22
     elif otp_type == "confirmation":
-        title = "✅ Booking Confirmation Code Requested"
-        description = (
-            f"A confirmation code was requested for Booking **#{booking_id}**."
-        )
-        color = 65280  # Green
+        title = f"✅ Confirmation Code Requested for Booking **#{booking_id}**"
+        color = 0x3498DB
     else:
         logger.error(f"Invalid OTP type: {otp_type}")
         return False
 
     try:
         fields = [
-            {"name": "Booking ID", "value": str(booking_id), "inline": True},
             {"name": "Booked By", "value": player_name, "inline": True},
-            {"name": "One-Time Password", "value": f"**`{code}`**", "inline": False},
             {
-                "name": "Expires In",
-                "value": f"{OTP_VALIDITY_SECONDS // 60} minutes",
-                "inline": True,
+                "name": "VERIFICATION CODE",
+                "value": f"**```\n{code}\n```**",
+                "inline": False,
             },
         ]
 
         if otp_type == "confirmation" and court_name and booking_time:
             display_court_name = court_name
+
             for court_data in COURTS:
                 if court_data["name"] == court_name:
                     display_court_name = court_data.get("alias", court_name)
                     break
 
+            date_str = booking_time.strftime("%d %b %Y")
+            time_str = booking_time.strftime("%H:%M")
+
             fields.insert(
-                2, {"name": "Court", "value": display_court_name, "inline": True}
+                2,
+                {"name": "DATE", "value": date_str, "inline": True},
             )
+
             fields.insert(
                 3,
-                {
-                    "name": "Time",
-                    "value": booking_time.strftime("%Y-%m-%d %H:%M"),
-                    "inline": True,
-                },
+                {"name": "TIME", "value": time_str, "inline": True},
+            )
+
+            fields.insert(
+                4, {"name": "COURT", "value": display_court_name, "inline": False}
             )
 
         payload = {
@@ -161,12 +158,15 @@ def send_otp_to_discord(
             "embeds": [
                 {
                     "title": title,
-                    "description": description,
                     "color": color,
                     "fields": fields,
-                    "footer": {
-                        "text": f"Requested at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    "image": {
+                        "url": "https://img.freepik.com/premium-photo/badminton-sports-background-vector-international-sports-day-illustration-graphic-design-decoration-gift-certificates-banners-flyers_880763-31028.jpg"
                     },
+                    "footer": {
+                        "text": f"Expires in {OTP_VALIDITY_SECONDS // 60} minutes"
+                    },
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
             ],
         }

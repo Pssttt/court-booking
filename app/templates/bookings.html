@@ -147,16 +147,29 @@
       <div class="modal-content">
         <div class="modal-header">Confirm Pending Booking</div>
         <div class="modal-body">
-          <p>
-            You can request a new confirmation code for Booking
-            <strong id="requestConfirmBookingInfo"></strong>.
-          </p>
-          <p style="margin-top: 8px; font-size: 12px">
-            This will send an OTP to Discord.
+          <p>You can request a new confirmation code for this booking.</p>
+          <p style="margin-top: 12px; font-size: 12px; color: #999">
+            <strong>Booking:</strong>
+            <span id="requestConfirmBookingInfo"></span>
           </p>
 
           <div style="margin-top: 8px; font-size: 12px">
-            <div style="display: flex; gap: 8px; margin-bottom: 12px">
+            <label
+              for="confirmBookingOtpInput"
+              style="display: block; margin-bottom: 6px"
+            >
+              Confirmation OTP:
+            </label>
+
+            <div style="display: flex; gap: 8px">
+              <input
+                type="text"
+                id="confirmBookingOtpInput"
+                class="password-input"
+                placeholder="Enter OTP to confirm"
+                style="margin-bottom: 0"
+              />
+
               <button
                 type="button"
                 id="requestConfirmCodeBtn"
@@ -176,24 +189,12 @@
               >
                 Get Code
               </button>
-              <div
-                id="requestConfirmCodeMsg"
-                style="font-size: 11px; margin-top: 4px; display: none"
-              ></div>
             </div>
 
-            <label
-              for="confirmBookingOtpInput"
-              style="display: block; margin-bottom: 6px"
-              >Confirmation OTP:</label
-            >
-            <input
-              type="text"
-              id="confirmBookingOtpInput"
-              class="password-input"
-              placeholder="Enter OTP to confirm"
-              style="margin-bottom: 0"
-            />
+            <div
+              id="requestConfirmCodeMsg"
+              style="font-size: 11px; margin-top: 4px; display: none"
+            ></div>
             <div
               id="confirmBookingOtpErrorMsg"
               style="
