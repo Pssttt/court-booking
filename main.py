@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from config.settings import SERVER
 from app.routes import router
 from app.storage import ensure_data_dir
+from app.tasks import run_cleanup_schedule
+import asyncio
 
 TEMPLATES_DIR = Path(__file__).parent / "app" / "templates"
 STATIC_DIR = Path(__file__).parent / "app" / "static"
@@ -28,9 +30,16 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_data_dir()
+    cleanup_task = asyncio.create_task(run_cleanup_schedule())
+
     """Handle app startup and shutdown"""
     logger.info("Court Booking WebApp started")
     yield
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Court Booking WebApp stopped")
 
 

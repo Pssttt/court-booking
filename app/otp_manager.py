@@ -70,3 +70,14 @@ def verify_otp(booking_id: int, code: str) -> bool:
         return True
 
     return False
+
+
+def cleanup_expired_otps() -> int:
+    """Remove all expired OTPs from storage"""
+    now = time.time()
+    expired_ids = [bid for bid, data in _otp_store.items() if now > data["expires_at"]]
+
+    for bid in expired_ids:
+        del _otp_store[bid]
+
+    return len(expired_ids)

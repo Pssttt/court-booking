@@ -4,7 +4,7 @@ Persists bookings to Database (PostgreSQL)
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 from app.database import get_db_session, get_db_engine
@@ -217,3 +217,25 @@ def delete_booking(booking_id: int):
         finally:
             session.close()
     return False
+
+
+def delete_old_bookings(days: int = 5) -> int:
+    """Delete bookings older than X days"""
+    session = get_db_session()
+    if session:
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            deleted_count = (
+                session.query(DBBooking)
+                .filter(DBBooking.created_at < cutoff_date)
+                .delete()
+            )
+            session.commit()
+            return deleted_count
+        except Exception as e:
+            logger.error(f"DB Cleanup Error: {e}")
+            session.rollback()
+            return 0
+        finally:
+            session.close()
+    return 0
