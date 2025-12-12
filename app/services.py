@@ -8,7 +8,7 @@ import asyncio
 from typing import Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from config.settingstest import GOOGLE_FORM, BOOKING_DATA, COURTS
+from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
 from app.storage import update_booking_status
 from app.websockets import manager
