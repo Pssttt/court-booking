@@ -4,7 +4,7 @@ Handles generation, storage, and verification of One-Time Passwords (OTPs).
 """
 
 import logging
-import random
+import secrets
 import string
 import time
 from typing import Dict
@@ -44,7 +44,7 @@ def check_otp_request_rate_limit(booking_id: int) -> None:
 
 def generate_otp() -> str:
     """Generate a 6-digit random numeric code"""
-    return "".join(random.choices(string.digits, k=6))
+    return "".join(secrets.choice(string.digits) for _ in range(6))
 
 
 def store_otp(booking_id: int, code: str) -> None:
