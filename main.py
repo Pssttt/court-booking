@@ -14,6 +14,7 @@ from config.settings import SERVER
 from app.routes import router
 from app.storage import ensure_data_dir
 from app.tasks import run_cleanup_schedule
+from app.services import restore_scheduled_tasks
 import asyncio
 
 TEMPLATES_DIR = Path(__file__).parent / "app" / "templates"
@@ -31,6 +32,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     ensure_data_dir()
     cleanup_task = asyncio.create_task(run_cleanup_schedule())
+
+    await restore_scheduled_tasks()
 
     """Handle app startup and shutdown"""
     logger.info("Court Booking WebApp started")

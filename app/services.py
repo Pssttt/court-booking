@@ -10,13 +10,67 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from config.settings import GOOGLE_FORM, BOOKING_DATA, COURTS
 from app.email_service import send_confirmation_email
-from app.storage import update_booking_status
+from app.storage import update_booking_status, get_all_bookings
 from app.websockets import manager
 
 logger = logging.getLogger(__name__)
 
 active_tasks = {}
 TZ_BANGKOK = ZoneInfo("Asia/Bangkok")
+
+
+async def restore_scheduled_tasks():
+    """
+    Restore scheduled tasks for confirmed bookings after server restart.
+    """
+    bookings = get_all_bookings()
+    count = 0
+    now = datetime.now(TZ_BANGKOK)
+
+    for booking in bookings:
+        if booking["status"] == "confirmed":
+            try:
+                submit_time_str = booking.get("submit_time")
+                if not submit_time_str:
+                    continue
+
+                submit_hour, submit_minute = map(int, submit_time_str.split(":"))
+
+                scheduled_str = booking.get("scheduled_datetime")
+                if not scheduled_str:
+                    continue
+
+                scheduled_dt = datetime.fromisoformat(scheduled_str)
+                if scheduled_dt < now.replace(tzinfo=None):
+                    logger.warning(
+                        f"Skipping restoration of past booking {booking['id']} scheduled for {scheduled_str}"
+                    )
+                    continue
+
+                player_names = {
+                    "p1": booking.get("p1"),
+                    "p2": booking.get("p2"),
+                    "p3": booking.get("p3"),
+                }
+
+                asyncio.create_task(
+                    wait_until_and_submit(
+                        booking["id"],
+                        player_names,
+                        booking["court"],
+                        submit_hour,
+                        submit_minute,
+                        booking.get("confirmation_email"),
+                        booking.get("phone"),
+                        booking.get("student_id"),
+                    )
+                )
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to restore task for booking {booking['id']}: {e}")
+
+    if count > 0:
+        logger.info(f"Restored {count} scheduled booking tasks.")
 
 
 class FormSubmissionError(Exception):
