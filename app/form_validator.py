@@ -8,7 +8,7 @@ import logging
 import re
 import json
 from typing import Dict, Any, List
-from config.settingstest import GOOGLE_FORM
+from config.settings import GOOGLE_FORM
 
 logger = logging.getLogger(__name__)
 
