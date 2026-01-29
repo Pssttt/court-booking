@@ -4,10 +4,41 @@ Send confirmation emails using Resend
 """
 
 import logging
+import time
+import threading
 from typing import Optional
 from config.settings import EMAIL_CONFIG
 
 logger = logging.getLogger(__name__)
+
+# global rate limiter
+_email_lock = threading.Lock()
+_last_send_time = 0.0
+MIN_SEND_INTERVAL = 0.6
+
+
+def _safe_send_email(params: dict) -> dict:
+    """
+    Thread-safe wrapper for Resend API to enforce rate limits.
+    Blocks until safe to send.
+    """
+    global _last_send_time
+    import resend
+
+    with _email_lock:
+        current_time = time.time()
+        elapsed = current_time - _last_send_time
+
+        if elapsed < MIN_SEND_INTERVAL:
+            sleep_time = MIN_SEND_INTERVAL - elapsed
+            logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f}s")
+            time.sleep(sleep_time)
+
+        try:
+            response = resend.Emails.send(params)
+            return response
+        finally:
+            _last_send_time = time.time()
 
 
 def send_confirmation_email(
@@ -67,7 +98,7 @@ def send_confirmation_email(
                 "html": html_content,
             }
 
-            response = resend.Emails.send(params)
+            response = _safe_send_email(params)
 
             if response and response.get("id"):
                 logger.info(
@@ -85,7 +116,7 @@ def send_confirmation_email(
             "html": html_content,
         }
 
-        response = resend.Emails.send(params)
+        response = _safe_send_email(params)
 
         if response and response.get("id"):
             logger.info(
